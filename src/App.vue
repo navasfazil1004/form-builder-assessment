@@ -24,10 +24,6 @@ function handleSubmit(data: Record<string, any>) {
       @submit="handleSubmit"
     />
 
-    <!-- Debugging: show current form state -->
-    <pre class="mt-6 bg-gray-100 p-4 rounded">
-{{ formData }}
-    </pre>
   </main>
 </template>
 

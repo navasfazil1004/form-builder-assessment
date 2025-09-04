@@ -83,7 +83,7 @@
 import { nanoid } from "nanoid";
 import { debounce } from "lodash";
 
-import { ref, reactive, computed, watch, toRaw, onMounted } from "vue";
+import { ref, reactive, computed, watch, toRaw } from "vue";
 import type { FormField, FieldType, SelectOption } from "@/types/form.types";
 import TextField from "@/components/fields/TextField/TextField.vue";
 import SelectField from "@/components/fields/SelectField/SelectField.vue";
@@ -106,50 +106,54 @@ const submitting = ref(false);
 const isDirty = ref(false);
 const focusedField = ref<FormField | null>(null);
 
-/** Undo/Redo stacks */
-const undoStack: Record<string, any>[] = [];
-const redoStack: Record<string, any>[] = [];
+const undoStack = ref<Record<string, any>[]>([]);
+const redoStack = ref<Record<string, any>[]>([]);
 
 function pushUndoSnapshot() {
   const snapshot = {
     formData: JSON.parse(JSON.stringify(toRaw(formData))),
     fields: JSON.parse(JSON.stringify(toRaw(fieldsRef.value))),
   };
-  undoStack.push(snapshot);
-  if (undoStack.length > 50) undoStack.shift();
-  redoStack.length = 0;
+  undoStack.value.push(snapshot);
+  if (undoStack.value.length > 50) undoStack.value.shift();
+  redoStack.value.length = 0;
 }
 
-const canUndo = computed(() => undoStack.length > 0);
-const canRedo = computed(() => redoStack.length > 0);
+const canUndo = computed(() => undoStack.value.length > 0);
+const canRedo = computed(() => redoStack.value.length > 0);
+
+function restoreSnapshot(snapshot: { formData: any; fields: any[] }) {
+  // Clear old formData
+  Object.keys(formData).forEach((key) => delete formData[key]);
+  // Assign cloned values
+  Object.assign(formData, snapshot.formData);
+
+  // Replace fieldsRef array while keeping it reactive
+  fieldsRef.value.splice(0, fieldsRef.value.length, ...snapshot.fields);
+}
 
 function undo() {
   if (!canUndo.value) return;
 
-  const snapshot = undoStack.pop()!;
-  redoStack.push({
+  redoStack.value.push({
     formData: JSON.parse(JSON.stringify(toRaw(formData))),
     fields: JSON.parse(JSON.stringify(toRaw(fieldsRef.value))),
   });
 
-  // Replace data and fields
-  Object.keys(formData).forEach((k) => delete formData[k]);
-  Object.assign(formData, snapshot.formData);
-  fieldsRef.value = snapshot.fields;
+  const snapshot = undoStack.value.pop()!;
+  restoreSnapshot(snapshot);
 }
 
 function redo() {
   if (!canRedo.value) return;
 
-  const snapshot = redoStack.pop()!;
-  undoStack.push({
+  undoStack.value.push({
     formData: JSON.parse(JSON.stringify(toRaw(formData))),
     fields: JSON.parse(JSON.stringify(toRaw(fieldsRef.value))),
   });
 
-  Object.keys(formData).forEach((k) => delete formData[k]);
-  Object.assign(formData, snapshot.formData);
-  fieldsRef.value = snapshot.fields;
+  const snapshot = redoStack.value.pop()!;
+  restoreSnapshot(snapshot);
 }
 
 /** Conditional logic */
@@ -227,12 +231,10 @@ watch(
   { deep: true }
 );
 
-/** Update field value */
 function updateValue(field: FormField, value: any) {
   const prev = formData[field.name];
-  const changed = prev !== value && JSON.stringify(prev) !== JSON.stringify(value);
-  if (changed) {
-    pushUndoSnapshot();
+  if (prev !== value) {
+    pushUndoSnapshot(); // before change
     formData[field.name] = value;
     try {
       validateField(field);
@@ -248,9 +250,11 @@ function addField(f: FormField) {
   fieldsRef.value.push(f);
 }
 function removeFieldById(id: string) {
-  pushUndoSnapshot();
   const idx = fieldsRef.value.findIndex((f) => f.id === id);
-  if (idx >= 0) fieldsRef.value.splice(idx, 1);
+  if (idx >= 0) {
+    pushUndoSnapshot(); // before removing
+    fieldsRef.value.splice(idx, 1);
+  }
 }
 
 /** Focus */
@@ -288,6 +292,7 @@ const newField = reactive<{
   isRange?: boolean;
   minDate?: string;
   maxDate?: string;
+  validation?: any[];
 }>({
   label: "",
   name: "",
@@ -298,14 +303,13 @@ const newField = reactive<{
   isRange: false,
   minDate: "",
   maxDate: "",
+  validation: [],
 });
-const addFieldLive = debounce(() => {
-  if (!newField.label.trim() || !newField.name.trim()) return;
 
-  const allowedTypes: FieldType[] = ["text", "select", "checkbox-group", "date"];
-  if (!allowedTypes.includes(newField.type)) newField.type = "text";
+function addFieldLive() {
+  if (!newField.label || !newField.name) return;
 
-  const options: SelectOption[] =
+  const options =
     newField.type === "select" || newField.type === "checkbox-group"
       ? newField.optionsRaw.split(",").map((o) => ({ value: o.trim(), label: o.trim() }))
       : [];
@@ -321,26 +325,21 @@ const addFieldLive = debounce(() => {
     maxDate: newField.maxDate || "",
   };
 
-  // ✅ Push snapshot BEFORE modifying fieldsRef
-  pushUndoSnapshot();
-
-  // Add the new field
+  pushUndoSnapshot(); // before adding
   fieldsRef.value.push(field);
 
-  // Reset newField for next input
-  newField.label = "";
-  newField.name = "";
-  newField.type = "text";
-  newField.optionsRaw = "";
-  newField.options = [];
-  newField.validation = [];
-  newField.isRange = false;
-  newField.minDate = "";
-  newField.maxDate = "";
-}, 300);
-onMounted(() => {
-  pushUndoSnapshot();
-});
+  Object.assign(newField, {
+    label: "",
+    name: "",
+    type: "text",
+    optionsRaw: "",
+    options: [],
+    validation: [],
+    isRange: false,
+    minDate: "",
+    maxDate: "",
+  });
+}
 </script>
 
 <style scoped>
