@@ -385,6 +385,18 @@ const newField = reactive<FormField & { optionsRaw: string }>({
   asyncLoader: null, // default no async
   layout: "vertical",
 });
+function removeFieldById(id: string) {
+  const index = fieldsRef.value.findIndex((f) => f.id === id);
+  if (index !== -1) {
+    pushUndoSnapshot(); // optional: keep undo/redo working
+    fieldsRef.value.splice(index, 1);
+    // Also remove the value from formData
+    const field = fieldsRef.value[index];
+    if (field?.name && formData[field.name] !== undefined) {
+      delete formData[field.name];
+    }
+  }
+}
 
 // --- Add new field live
 function addFieldLive() {
@@ -414,22 +426,21 @@ function addFieldLive() {
       });
   }
   if (newField.type === "checkbox-group") {
-  if (newFieldValidationRequired.value)
-    validation.push({ type: "required", message: "This field is required." });
-  if (newFieldValidationMinLength.value !== null)
-    validation.push({
-      type: "minSelection",
-      value: newFieldValidationMinLength.value,
-      message: `Select at least ${newFieldValidationMinLength.value} option(s).`,
-    });
-  if (newFieldValidationMaxLength.value !== null)
-    validation.push({
-      type: "maxSelection",
-      value: newFieldValidationMaxLength.value,
-      message: `Select no more than ${newFieldValidationMaxLength.value} option(s).`,
-    });
-}
-
+    if (newFieldValidationRequired.value)
+      validation.push({ type: "required", message: "This field is required." });
+    if (newFieldValidationMinLength.value !== null)
+      validation.push({
+        type: "minSelection",
+        value: newFieldValidationMinLength.value,
+        message: `Select at least ${newFieldValidationMinLength.value} option(s).`,
+      });
+    if (newFieldValidationMaxLength.value !== null)
+      validation.push({
+        type: "maxSelection",
+        value: newFieldValidationMaxLength.value,
+        message: `Select no more than ${newFieldValidationMaxLength.value} option(s).`,
+      });
+  }
 
   const field: FormField = {
     ...newField,

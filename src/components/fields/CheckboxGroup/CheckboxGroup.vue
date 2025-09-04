@@ -9,6 +9,7 @@
       v-model="search"
       placeholder="Search..."
       @focus="$emit('focus')"
+      class="search-input"
     />
 
     <!-- Checkboxes -->
@@ -29,6 +30,7 @@
         />
         <span>{{ opt.label }}</span>
       </label>
+
       <div v-if="filteredOptions.length === 0" class="empty">No options found</div>
     </div>
 
@@ -38,13 +40,17 @@
         <input
           type="checkbox"
           :checked="allSelected"
-          :indeterminate="partialSelected"
+          :indeterminate.prop="partialSelected"
           @change="toggleAll($event.target.checked)"
           :disabled="field.disabled || !options.length"
         />
         Select All
       </label>
-      <button type="button" @click="clearAll" :disabled="internalValue.length === 0 || field.disabled">
+      <button
+        type="button"
+        @click="clearAll"
+        :disabled="internalValue.length === 0 || field.disabled"
+      >
         Clear
       </button>
     </div>
@@ -86,7 +92,6 @@ watch(() => props.options, (newOpts) => {
 
 const search = ref("");
 const loading = ref(false);
-
 const searchable = computed(() => props.searchable ?? false);
 
 const filteredOptions = computed(() => {
@@ -129,14 +134,11 @@ const errors = computed(() => {
     if (rule.type === "minLength" && valCount < rule.value) errs.push(rule.message);
     if (rule.type === "maxLength" && valCount > rule.value) errs.push(rule.message);
     if (rule.type === "required" && valCount === 0) errs.push(rule.message);
-
-    // Add these for checkbox group
     if (rule.type === "minSelection" && valCount < rule.value) errs.push(rule.message);
     if (rule.type === "maxSelection" && valCount > rule.value) errs.push(rule.message);
   });
   return errs;
 });
-
 
 // Async loader
 async function loadOptionsAsync(loader?: () => Promise<Array<{ label: string; value: any }>>) {
@@ -157,17 +159,87 @@ defineExpose({ loadOptionsAsync });
 </script>
 
 <style scoped>
-.checkboxgroup { margin-bottom: 12px; border: 1px solid #ccc; padding: 8px; border-radius: 6px; }
-.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.checkboxgroup {
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 16px; /* larger text for touch */
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px; /* bigger spacing for touch */
+  margin-top: 6px;
+}
+
 .controls.vertical { flex-direction: column; }
 .controls.horizontal { flex-direction: row; }
-.controls.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
-.checkbox-option { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 4px; cursor: pointer; transition: background 0.2s; user-select: none; }
-.checkbox-option:hover { background-color: rgba(0,0,0,0.05); }
-.meta { margin-top: 10px; display: flex; gap: 12px; align-items: center; }
-.select-all { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
-.errors { color: #d00; font-size: 12px; margin-top: 6px; }
-.empty { font-size: 12px; color: #666; margin-top: 4px; }
-.loading { font-size: 12px; color: #666; margin-top: 4px; }
-input[type='search'] { margin-bottom: 6px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
+.controls.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* touch-friendly spacing */
+  padding: 10px 12px; /* larger tap area */
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.checkbox-option:hover {
+  background-color: rgba(0, 0, 255, 0.05);
+  transform: scale(1.02);
+}
+
+input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.meta {
+  margin-top: 10px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.errors {
+  color: #d00;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.empty {
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.loading {
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+}
+
+input[type='search'] {
+  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  font-size: 16px;
+}
 </style>
