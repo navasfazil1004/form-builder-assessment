@@ -12,6 +12,9 @@
           @focus="onFocus(field)"
           :error="errors[field.name]"
           :options="field.options"
+          :searchable="field.searchable"
+          :multiple="field.multiple"
+          :asyncLoader="field.asyncLoader"
           :isRange="field.isRange"
           :minDate="field.minDate"
           :maxDate="field.maxDate"
@@ -100,7 +103,23 @@
         Options (comma separated):
         <input v-model="newField.optionsRaw" placeholder="Red,Green,Blue" />
       </label>
+      <label v-if="newField.type === 'select'">
+        Multiple selection:
+        <input type="checkbox" v-model="newField.multiple" />
+      </label>
 
+      <!-- Searchable -->
+      <label v-if="newField.type === 'select'">
+        Searchable:
+        <input type="checkbox" v-model="newField.searchable" />
+      </label>
+
+      <!-- Async loader URL (optional) -->
+      <label v-if="newField.type === 'select'">
+        Async options URL (optional):
+        <input v-model="asyncUrl" placeholder="Enter API URL" />
+        <button type="button" @click="setAsyncLoader">Load Async</button>
+      </label>
       <!-- Date-specific options -->
       <template v-if="newField.type === 'date'">
         <label>
@@ -149,7 +168,15 @@ const newFieldValidationRequired = ref(false);
 const newFieldValidationMinLength = ref<number | null>(null);
 const newFieldValidationMaxLength = ref<number | null>(null);
 const newFieldValidationPattern = ref<string>("");
-
+const asyncUrl = ref("");
+function setAsyncLoader() {
+  if (!asyncUrl.value) return;
+  newField.asyncLoader = async () => {
+    const res = await fetch(asyncUrl.value);
+    const data = await res.json();
+    return data.map((o: any) => ({ label: o.label, value: o.value }));
+  };
+}
 // --- Props & emits
 const props = defineProps<{ schema: FormField[]; initialValues?: Record<string, any> }>();
 const emits = defineEmits<{
@@ -315,7 +342,6 @@ async function handleSubmit() {
   }
 }
 
-// --- Reactive newField
 const newField = reactive<FormField & { optionsRaw: string }>({
   id: "",
   label: "",
@@ -331,6 +357,9 @@ const newField = reactive<FormField & { optionsRaw: string }>({
   maxDate: "",
   validation: [],
   mask: "",
+  multiple: false, // default single
+  searchable: false, // default no search
+  asyncLoader: null, // default no async
 });
 
 // --- Add new field live
@@ -369,7 +398,12 @@ function addFieldLive() {
   const field: FormField = {
     ...newField,
     id: `field-${nanoid()}`,
-    options,
+    options:
+      newField.type === "select"
+        ? newField.optionsRaw
+            .split(",")
+            .map((o) => ({ label: o.trim(), value: o.trim() }))
+        : [],
     validation,
     dynamic: true,
   };
