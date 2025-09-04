@@ -103,6 +103,16 @@
         Options (comma separated):
         <input v-model="newField.optionsRaw" placeholder="Red,Green,Blue" />
       </label>
+
+      <!-- Checkbox-group layout -->
+      <label v-if="newField.type === 'checkbox-group'">
+        Layout:
+        <select v-model="newField.layout">
+          <option value="vertical">Vertical</option>
+          <option value="horizontal">Horizontal</option>
+          <option value="grid">Grid</option>
+        </select>
+      </label>
       <label v-if="newField.type === 'select'">
         Multiple selection:
         <input type="checkbox" v-model="newField.multiple" />
@@ -135,7 +145,20 @@
           <input type="date" v-model="newField.maxDate" />
         </label>
       </template>
-
+      <!-- Validation for checkbox-group -->
+      <div v-if="newField.type === 'checkbox-group'" class="validation-controls">
+        <label>
+          <input type="checkbox" v-model="newFieldValidationRequired" /> Required
+        </label>
+        <label>
+          Min Selection:
+          <input type="number" v-model.number="newFieldValidationMinLength" min="0" />
+        </label>
+        <label>
+          Max Selection:
+          <input type="number" v-model.number="newFieldValidationMaxLength" min="0" />
+        </label>
+      </div>
       <button type="button" @click="addFieldLive">Add Field</button>
     </fieldset>
 
@@ -360,16 +383,12 @@ const newField = reactive<FormField & { optionsRaw: string }>({
   multiple: false, // default single
   searchable: false, // default no search
   asyncLoader: null, // default no async
+  layout: "vertical",
 });
 
 // --- Add new field live
 function addFieldLive() {
   if (!newField.label || !newField.name) return;
-
-  const options =
-    newField.type === "select" || newField.type === "checkbox-group"
-      ? newField.optionsRaw.split(",").map((o) => ({ label: o.trim(), value: o.trim() }))
-      : [];
 
   const validation: ValidationRule[] = [];
   if (newField.type === "text") {
@@ -394,12 +413,29 @@ function addFieldLive() {
         message: "Invalid format.",
       });
   }
+  if (newField.type === "checkbox-group") {
+  if (newFieldValidationRequired.value)
+    validation.push({ type: "required", message: "This field is required." });
+  if (newFieldValidationMinLength.value !== null)
+    validation.push({
+      type: "minSelection",
+      value: newFieldValidationMinLength.value,
+      message: `Select at least ${newFieldValidationMinLength.value} option(s).`,
+    });
+  if (newFieldValidationMaxLength.value !== null)
+    validation.push({
+      type: "maxSelection",
+      value: newFieldValidationMaxLength.value,
+      message: `Select no more than ${newFieldValidationMaxLength.value} option(s).`,
+    });
+}
+
 
   const field: FormField = {
     ...newField,
     id: `field-${nanoid()}`,
     options:
-      newField.type === "select"
+      newField.type === "select" || newField.type === "checkbox-group"
         ? newField.optionsRaw
             .split(",")
             .map((o) => ({ label: o.trim(), value: o.trim() }))
