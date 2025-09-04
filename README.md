@@ -1,19 +1,14 @@
+# Form Builder Assessment
 
-# Dynamic Form Builder Component
+A **dynamic Vue 3 form builder** with support for:
 
-A fully dynamic, reactive, and customizable form builder for Vue 3.  
-Supports text inputs, selects, checkbox groups, date pickers, conditional fields, validation, undo/redo, and async option loading.
-
----
-
-
-- Adding/removing fields dynamically at runtime.
-- Conditional visibility of fields based on other field values.
-- Validation: required, min/max length, regex, min/max selection.
-- Multiple input types: text, email, password, number, phone, select, checkbox group, date/range.
-- Async loading of select options.
-- Undo/redo for form changes.
-- Auto focus and scroll for active fields.
+- Text, select, checkbox-group, and date/range fields
+- Dynamic field addition and removal
+- Conditional field display
+- Validation: required, min/max length, regex, min/max selection
+- Async option loading for select fields
+- Undo/redo support
+- Reactive form data with change tracking
 
 ---
 
@@ -21,19 +16,16 @@ Supports text inputs, selects, checkbox groups, date pickers, conditional fields
 
 1. [Project Setup](#project-setup)
 2. [Development](#development)
-3. [Type Checking](#type-checking)
-4. [Build](#build)
-5. [Storybook](#storybook)
-6. [Testing](#testing)
-7. [Project Structure](#project-structure)
-8. [Dependencies](#dependencies)
-9. [Component Usage](#component-usage)
-10. [Dynamic Fields](#dynamic-fields)
-11. [Conditional Display](#conditional-display)
-12. [Validation](#validation)
-13. [Undo / Redo](#undo--redo)
-14. [Styling](#styling)
-15. [License](#license)
+3. [Scripts](#scripts)
+4. [Project Structure](#project-structure)
+5. [Dependencies](#dependencies)
+6. [Component Usage](#component-usage)
+7. [Dynamic Fields](#dynamic-fields)
+8. [Conditional Display](#conditional-display)
+9. [Validation](#validation)
+10. [Undo / Redo](#undo--redo)
+11. [Styling](#styling)
+12. [License](#license)
 
 ---
 
@@ -42,45 +34,222 @@ Supports text inputs, selects, checkbox groups, date pickers, conditional fields
 ### Prerequisites
 
 - Node.js >= 20.19.0 or >= 22.12.0
-- npm (v9+ recommended)
+- npm >= 9
 
 Install dependencies:
 
 ```bash
 npm install
-
-## Recommended IDE Setup
-
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
 ```
 
-### Compile and Hot-Reload for Development
+---
 
-```sh
+## Development
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+Preview production build locally:
 
-```sh
-npm run build
+```bash
+npm run preview
 ```
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+Run Storybook for component documentation:
 
-```sh
-npm run test:unit
+```bash
+npm run storybook
 ```
+
+Build static Storybook site:
+
+```bash
+npm run build-storybook
+```
+
+---
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `dev` | Starts Vite development server |
+| `preview` | Previews production build locally |
+| `build` | Runs type check and builds project |
+| `build-only` | Builds project without type check |
+| `type-check` | Runs Vue TypeScript compiler (`vue-tsc`) |
+| `test:unit` | Runs unit tests via Vitest |
+| `test:ui` | Runs Vitest interactive UI |
+| `test` | Runs all tests in CLI |
+| `coverage` | Runs tests and generates coverage report |
+| `storybook` | Starts Storybook dev server |
+| `build-storybook` | Builds Storybook static site |
+
+---
+
+## Project Structure
+
+```
+form-builder-assessment/
+├─ src/
+│  ├─ components/
+│  │  ├─ DynamicFormBuilder.vue       # Main form builder
+│  │  └─ fields/
+│  │     ├─ TextField.vue
+│  │     ├─ SelectField.vue
+│  │     ├─ CheckboxGroup.vue
+│  │     └─ DateField.vue
+│  ├─ composables/
+│  │  └─ useFormValidation.ts         # Validation composable
+│  ├─ types/
+│  │  └─ form.types.ts                # Type definitions
+│  ├─ App.vue
+│  └─ main.ts
+├─ public/
+├─ package.json
+├─ tsconfig.json
+├─ vite.config.ts
+├─ storybook/
+└─ README.md
+```
+
+- `components/` – Vue SFC components for form builder and fields
+- `composables/` – Vue composables (e.g., validation logic)
+- `types/` – TypeScript type definitions
+- `storybook/` – Storybook configuration
+- `public/` – Static assets
+
+---
+
+## Dependencies
+
+- **Vue 3** – Core framework
+- **Pinia** – Optional state management
+- **nanoid** – Unique ID generation
+- **date-fns** – Date utilities
+- **imask** – Input masking
+- **lodash & lodash.debounce** – Utilities
+
+Dev tools:
+- TypeScript, Vite, Vitest, Storybook, vue-tsc
+
+---
+
+## Component Usage
+
+```vue
+<template>
+  <DynamicFormBuilder
+    :schema="fields"
+    :initialValues="{ firstName: 'John' }"
+    @submit="onSubmit"
+    @change="onChange"
+    @dirty="onDirty"
+  />
+</template>
+
+<script setup lang="ts">
+import DynamicFormBuilder from '@/components/DynamicFormBuilder.vue';
+import type { FormField } from '@/types/form.types';
+
+const fields: FormField[] = [
+  { id: 'f1', name: 'firstName', label: 'First Name', type: 'text' },
+  { id: 'f2', name: 'favoriteColor', label: 'Favorite Color', type: 'select', options: [{ label: 'Red', value: 'red' }] },
+];
+
+function onSubmit({ valid, data }: { valid: boolean; data: Record<string, any> }) {
+  console.log('Submit:', valid, data);
+}
+
+function onChange({ name, value, data }: { name: string; value: any; data: Record<string, any> }) {
+  console.log('Change:', name, value, data);
+}
+
+function onDirty(isDirty: boolean) {
+  console.log('Dirty state:', isDirty);
+}
+</script>
+```
+
+---
+
+## Dynamic Fields
+
+- Add fields live using the **Add Field** panel
+- Configure label, name, type, placeholder, mask, options, validation, conditional display, date configurations
+- Click **Add Field** to append it to the form
+
+---
+
+## Conditional Display
+
+- Fields appear based on other field values
+- Operators: `equals`, `notEquals`, `contains`, `greaterThan`, `lessThan`
+- Supports nested AND/OR logic
+
+Example:
+
+```ts
+conditionalDisplay: {
+  field: 'country',
+  operator: 'equals',
+  value: 'USA'
+}
+```
+
+---
+
+## Validation
+
+- Text fields: required, min/max length, regex
+- Checkbox group: required, min/max selection
+- Validation errors are reactive and displayed per field
+
+---
+
+## Undo / Redo
+
+```vue
+<button @click="undo" :disabled="!canUndo">Undo</button>
+<button @click="redo" :disabled="!canRedo">Redo</button>
+```
+
+- Stores up to 50 snapshots
+- Redo stack clears on new actions
+
+---
+
+## Styling
+
+- Focused field highlight:
+
+```css
+.field-focused {
+  outline: 2px solid #4f46e5;
+  transition: outline 0.2s ease-in-out;
+}
+```
+
+- Fade transitions for field add/remove:
+
+```css
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+```
+
+---
+
+## License
+
+MIT License
+
