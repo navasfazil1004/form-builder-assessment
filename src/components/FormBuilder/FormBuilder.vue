@@ -346,12 +346,29 @@ const fieldRefs = reactive<Record<string, HTMLElement | null>>({});
 const asyncUrl = ref("");
 function setAsyncLoader() {
   if (!asyncUrl.value) return;
+
   newField.asyncLoader = async () => {
-    const res = await fetch(asyncUrl.value);
-    const data = await res.json();
-    return data.map((o: any) => ({ label: o.label, value: o.value }));
+    try {
+      const res = await fetch(asyncUrl.value);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      console.log("Fetched async options:", data);
+
+      // Map to the format your select component expects
+      return data.map((o: any) => ({
+        label: o.label ?? o.name ?? o.title ?? "Unknown",
+        value: o.value ?? o.id ?? o.name ?? "unknown",
+      }));
+    } catch (error) {
+      console.error("Error fetching async options:", error);
+      return [];
+    }
   };
 }
+
 function resetForm() {
   pushUndoSnapshot();
   Object.keys(formData).forEach((key) => (formData[key] = ""));
@@ -681,6 +698,7 @@ function addFieldLive() {
         : [],
     validation,
     dynamic: true,
+    asyncLoader: newField.asyncLoader || null,
   };
   if (newField.conditionalField) {
     field.conditionalDisplay = {
@@ -705,6 +723,7 @@ function addFieldLive() {
     isRange: false,
     minDate: "",
     maxDate: "",
+    asyncLoader: null,
   });
   newFieldValidationRequired.value = false;
   newFieldValidationMinLength.value = null;
