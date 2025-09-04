@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "date-fns": "^4.1.0",
+    "lodash": "^4.17.21",
     "lodash.debounce": "^4.0.8",
     "nanoid": "^5.1.5",
     "pinia": "^3.0.3",

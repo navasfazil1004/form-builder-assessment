@@ -5,7 +5,7 @@
     <div class="date-inputs">
       <!-- Single date -->
       <input
-        v-if="!field.range"
+        v-if="!isRange"
         :id="field.id"
         type="date"
         :value="internalValue"
@@ -37,7 +37,7 @@
     </div>
 
     <div v-if="errorMessages.length" class="errors">
-      <div v-for="(err,i) in errorMessages" :key="i">{{ err }}</div>
+      <div v-for="(err, i) in errorMessages" :key="i">{{ err }}</div>
     </div>
   </label>
 </template>
@@ -61,31 +61,27 @@ const internalValue = ref<string>(typeof props.modelValue === 'string' ? props.m
 const rangeStart = ref<string>('')
 const rangeEnd = ref<string>('')
 
+const isRange = computed(() => !!props.field.isRange)
+const minDate = computed(() => props.field.minDate || '')
+const maxDate = computed(() => props.field.maxDate || '')
+
 // Initialize range if modelValue is object
-if (props.field.range && props.modelValue && typeof props.modelValue === 'object') {
+if (isRange.value && props.modelValue && typeof props.modelValue === 'object') {
   rangeStart.value = props.modelValue.start || ''
   rangeEnd.value = props.modelValue.end || ''
 }
 
 // Watch for prop changes
-watch(() => props.modelValue, v => {
-  if (!props.field.range) internalValue.value = v as string || ''
-  else if (v && typeof v === 'object') {
-    rangeStart.value = v.start || ''
-    rangeEnd.value = v.end || ''
+watch(
+  () => props.modelValue,
+  (v) => {
+    if (!isRange.value) internalValue.value = v as string || ''
+    else if (v && typeof v === 'object') {
+      rangeStart.value = v.start || ''
+      rangeEnd.value = v.end || ''
+    }
   }
-})
-
-// Min/Max from validation rules
-const minDate = computed(() => {
-  const rule = props.field.validation?.find(r => r.type === 'minDate')
-  return rule?.value || ''
-})
-
-const maxDate = computed(() => {
-  const rule = props.field.validation?.find(r => r.type === 'maxDate')
-  return rule?.value || ''
-})
+)
 
 const errorMessages = ref<string[]>([])
 
