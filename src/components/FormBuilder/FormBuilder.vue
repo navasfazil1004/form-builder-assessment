@@ -1,203 +1,275 @@
 <template>
-  <form @submit.prevent="handleSubmit" class="form-builder">
-    <!-- Existing & dynamic fields -->
-    <transition-group name="fade" tag="div">
+  <form
+    @submit.prevent="handleSubmit"
+    class="max-w-5xl mx-auto p-6 bg-white shadow-lg rounded-lg space-y-6"
+  >
+    <!-- Dynamic Fields -->
+    <transition-group name="fade" tag="div" class="space-y-4">
       <template v-for="field in visibleFields" :key="field.id">
-        <component
-          :is="getComponent(field.type)"
-          :id="field.id"
-          :field="field"
-          :modelValue="formData[field.name] ?? ''"
-          @update:modelValue="(val) => updateValue(field, val)"
-          @focus="onFocus(field)"
-          :error="errors[field.name]"
-          :options="field.options"
-          :searchable="field.searchable"
-          :multiple="field.multiple"
-          :asyncLoader="field.asyncLoader"
-          :isRange="field.isRange"
-          :minDate="field.minDate"
-          :maxDate="field.maxDate"
-          :placeholder="field.placeholder"
-          :subType="field.subType"
-          :mask="field.mask"
-          :class="{ 'field-focused': focusedField?.id === field.id }"
-        />
-        <button v-if="field.dynamic" type="button" @click="removeFieldById(field.id)">
-          Remove
-        </button>
+        <div class="flex items-start space-x-3" :ref="(el) => (fieldRefs[field.id] = el)">
+          <component
+            :is="getComponent(field.type)"
+            :id="field.id"
+            :field="field"
+            :modelValue="formData[field.name] ?? ''"
+            @update:modelValue="(val) => updateValue(field, val)"
+            @focus="onFocus(field)"
+            :error="errors[field.name]"
+            :options="field.options"
+            :searchable="field.searchable"
+            :multiple="field.multiple"
+            :asyncLoader="field.asyncLoader"
+            :isRange="field.isRange"
+            :minDate="field.minDate"
+            :maxDate="field.maxDate"
+            :placeholder="field.placeholder"
+            :subType="field.subType"
+            :mask="field.mask"
+            :class="{ 'ring-2 ring-blue-500': focusedField?.id === field.id }"
+            class="flex-1 p-2 border rounded"
+          />
+          <button
+            v-if="field.dynamic"
+            type="button"
+            @click="removeFieldById(field.id)"
+            class="mt-2 text-red-500 hover:text-red-700 text-sm"
+          >
+            Remove
+          </button>
+        </div>
       </template>
     </transition-group>
 
-    <!-- Add Field Panel -->
-    <!-- Conditional Display Section -->
-    <!-- Real-Time Suggestions Panel -->
-  
-
-    <fieldset v-if="fieldsRef.length" class="conditional-panel">
-      <legend>Conditional Display (optional)</legend>
-
-      <label>
-        Depends on Field:
-        <select v-model="newField.conditionalField">
-          <option value="">None</option>
-          <option v-for="f in fieldsRef" :key="f.id" :value="f.name">
-            {{ f.label }}
-          </option>
-        </select>
-      </label>
-
-      <label v-if="newField.conditionalField">
-        Operator:
-        <select v-model="newField.conditionalOperator">
-          <option value="equals">Equals</option>
-          <option value="notEquals">Not Equals</option>
-          <option value="contains">Contains</option>
-          <option value="greaterThan">Greater Than</option>
-          <option value="lessThan">Less Than</option>
-        </select>
-      </label>
-
-      <label v-if="newField.conditionalField">
-        Value:
-        <input v-model="newField.conditionalValue" placeholder="Value to compare" />
-      </label>
-    </fieldset>
-
-    <fieldset class="add-field-panel">
-      <legend>Add New Field</legend>
-
-      <label>
-        Label:
-        <input v-model="newField.label" placeholder="Field label" />
-      </label>
-
-      <label>
-        Name:
-        <input v-model="newField.name" placeholder="Field name" />
-      </label>
-
-      <label>
-        Placeholder:
-        <input v-model="newField.placeholder" placeholder="Optional placeholder" />
-      </label>
-      <label>
-        Mask (optional, 9=digit, A=letter, *=alphanumeric):
-        <input v-model="newField.mask" placeholder="e.g. (999) 999-9999" />
-      </label>
-
-      <label>
-        Type:
-        <select v-model="newField.type">
-          <option value="text">Text / Input</option>
-          <option value="select">Select</option>
-          <option value="checkbox-group">Checkbox Group</option>
-          <option value="date">Date</option>
-        </select>
-      </label>
-
-      <!-- Input Subtype -->
-      <label v-if="newField.type === 'text'">
-        Input Subtype:
-        <select v-model="newField.subType">
-          <option value="text">Text</option>
-          <option value="email">Email</option>
-          <option value="password">Password</option>
-          <option value="number">Number</option>
-          <option value="tel">Phone</option>
-        </select>
-      </label>
-
-      <!-- Validation -->
-      <div v-if="newField.type === 'text'" class="validation-controls">
-        <label>
-          <input type="checkbox" v-model="newFieldValidationRequired" />
-          Required
+    <!-- Conditional Display Panel -->
+    <fieldset v-if="fieldsRef.length" class="p-4 border rounded space-y-3">
+      <legend class="font-semibold">Conditional Display (optional)</legend>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <label class="block">
+          Depends on Field:
+          <select
+            v-model="newField.conditionalField"
+            class="mt-1 w-full border rounded p-2"
+          >
+            <option value="">None</option>
+            <option v-for="f in fieldsRef" :key="f.id" :value="f.name">
+              {{ f.label }}
+            </option>
+          </select>
         </label>
-        <label>
-          Min Length:
-          <input type="number" v-model.number="newFieldValidationMinLength" min="0" />
+
+        <label v-if="newField.conditionalField" class="block">
+          Operator:
+          <select
+            v-model="newField.conditionalOperator"
+            class="mt-1 w-full border rounded p-2"
+          >
+            <option value="equals">Equals</option>
+            <option value="notEquals">Not Equals</option>
+            <option value="contains">Contains</option>
+            <option value="greaterThan">Greater Than</option>
+            <option value="lessThan">Less Than</option>
+          </select>
         </label>
-        <label>
-          Max Length:
-          <input type="number" v-model.number="newFieldValidationMaxLength" min="0" />
-        </label>
-        <label>
-          Pattern (Regex):
+
+        <label v-if="newField.conditionalField" class="block">
+          Value:
           <input
-            type="text"
-            v-model="newFieldValidationPattern"
-            placeholder="e.g. ^[A-Za-z]+$"
+            v-model="newField.conditionalValue"
+            placeholder="Value to compare"
+            class="mt-1 w-full border rounded p-2"
           />
         </label>
       </div>
-
-      <!-- Options for select / checkbox -->
-      <label v-if="newField.type === 'select' || newField.type === 'checkbox-group'">
-        Options (comma separated):
-        <input v-model="newField.optionsRaw" placeholder="Red,Green,Blue" />
-      </label>
-
-      <!-- Checkbox-group layout -->
-      <label v-if="newField.type === 'checkbox-group'">
-        Layout:
-        <select v-model="newField.layout">
-          <option value="vertical">Vertical</option>
-          <option value="horizontal">Horizontal</option>
-          <option value="grid">Grid</option>
-        </select>
-      </label>
-      <label v-if="newField.type === 'select'">
-        Multiple selection:
-        <input type="checkbox" v-model="newField.multiple" />
-      </label>
-
-      <!-- Searchable -->
-      <label v-if="newField.type === 'select'">
-        Searchable:
-        <input type="checkbox" v-model="newField.searchable" />
-      </label>
-
-      <!-- Async loader URL (optional) -->
-      <label v-if="newField.type === 'select'">
-        Async options URL (optional):
-        <input v-model="asyncUrl" placeholder="Enter API URL" />
-        <button type="button" @click="setAsyncLoader">Load Async</button>
-      </label>
-      <!-- Date-specific options -->
-      <template v-if="newField.type === 'date'">
-        <label>
-          Is Range:
-          <input type="checkbox" v-model="newField.isRange" />
-        </label>
-        <label>
-          Min Date:
-          <input type="date" v-model="newField.minDate" />
-        </label>
-        <label>
-          Max Date:
-          <input type="date" v-model="newField.maxDate" />
-        </label>
-      </template>
-      <!-- Validation for checkbox-group -->
-      <div v-if="newField.type === 'checkbox-group'" class="validation-controls">
-        <label>
-          <input type="checkbox" v-model="newFieldValidationRequired" /> Required
-        </label>
-        <label>
-          Min Selection:
-          <input type="number" v-model.number="newFieldValidationMinLength" min="0" />
-        </label>
-        <label>
-          Max Selection:
-          <input type="number" v-model.number="newFieldValidationMaxLength" min="0" />
-        </label>
-      </div>
-      <button type="button" @click="addFieldLive">Add Field</button>
     </fieldset>
-  <fieldset class="suggestions-panel mt-4 p-4 border rounded bg-gray-50">
-      <legend class="font-semibold text-gray-700">Suggestions</legend>
 
+    <!-- Add New Field Panel -->
+    <fieldset class="p-4 border rounded space-y-4">
+      <legend class="font-semibold">Add New Field</legend>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Left Column: Basic Field Info -->
+        <div class="space-y-3">
+          <label class="block">
+            Label:
+            <input
+              v-model="newField.label"
+              placeholder="Field label"
+              class="mt-1 w-full border rounded p-2"
+            />
+          </label>
+
+          <label class="block">
+            Name:
+            <input
+              v-model="newField.name"
+              placeholder="Field name"
+              class="mt-1 w-full border rounded p-2"
+            />
+          </label>
+
+          <label class="block">
+            Placeholder:
+            <input
+              v-model="newField.placeholder"
+              placeholder="Optional placeholder"
+              class="mt-1 w-full border rounded p-2"
+            />
+          </label>
+
+          <label class="block">
+            Mask:
+            <input
+              v-model="newField.mask"
+              placeholder="e.g. (999) 999-9999"
+              class="mt-1 w-full border rounded p-2"
+            />
+          </label>
+
+          <label class="block">
+            Type:
+            <select v-model="newField.type" class="mt-1 w-full border rounded p-2">
+              <option value="text">Text / Input</option>
+              <option value="select">Select</option>
+              <option value="checkbox-group">Checkbox Group</option>
+              <option value="date">Date</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Right Column: Type-specific Options -->
+        <div class="space-y-3">
+          <!-- Text Subtype & Validation -->
+          <div v-if="newField.type === 'text'" class="space-y-2">
+            <label class="block">
+              Input Subtype:
+              <select v-model="newField.subType" class="mt-1 w-full border rounded p-2">
+                <option value="text">Text</option>
+                <option value="email">Email</option>
+                <option value="password">Password</option>
+                <option value="number">Number</option>
+                <option value="tel">Phone</option>
+              </select>
+            </label>
+
+            <label class="flex items-center gap-2"
+              ><input type="checkbox" v-model="newFieldValidationRequired" />
+              Required</label
+            >
+            <label class="block">
+              Min Length:
+              <input
+                type="number"
+                v-model.number="newFieldValidationMinLength"
+                min="0"
+                class="mt-1 w-full border rounded p-2"
+              />
+            </label>
+            <label class="block">
+              Max Length:
+              <input
+                type="number"
+                v-model.number="newFieldValidationMaxLength"
+                min="0"
+                class="mt-1 w-full border rounded p-2"
+              />
+            </label>
+            <label class="block">
+              Pattern (Regex):
+              <input
+                type="text"
+                v-model="newFieldValidationPattern"
+                placeholder="e.g. ^[A-Za-z]+$"
+                class="mt-1 w-full border rounded p-2"
+              />
+            </label>
+          </div>
+
+          <!-- Select / Checkbox Options -->
+          <div
+            v-if="newField.type === 'select' || newField.type === 'checkbox-group'"
+            class="space-y-2"
+          >
+            <label class="block">
+              Options (comma separated):
+              <input
+                v-model="newField.optionsRaw"
+                placeholder="Red,Green,Blue"
+                class="mt-1 w-full border rounded p-2"
+              />
+            </label>
+          </div>
+
+          <div v-if="newField.type === 'checkbox-group'">
+            <label class="block">
+              Layout:
+              <select v-model="newField.layout" class="mt-1 w-full border rounded p-2">
+                <option value="vertical">Vertical</option>
+                <option value="horizontal">Horizontal</option>
+                <option value="grid">Grid</option>
+              </select>
+            </label>
+          </div>
+
+          <div v-if="newField.type === 'select'" class="space-y-2">
+            <label class="flex items-center gap-2"
+              ><input type="checkbox" v-model="newField.multiple" /> Multiple
+              selection</label
+            >
+            <label class="flex items-center gap-2"
+              ><input type="checkbox" v-model="newField.searchable" /> Searchable</label
+            >
+            <label class="block">
+              Async URL:
+              <input
+                v-model="asyncUrl"
+                placeholder="Enter API URL"
+                class="mt-1 w-full border rounded p-2"
+              />
+              <button
+                type="button"
+                @click="setAsyncLoader"
+                class="ml-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Load
+              </button>
+            </label>
+          </div>
+
+          <div v-if="newField.type === 'date'" class="space-y-2">
+            <label class="flex items-center gap-2"
+              ><input type="checkbox" v-model="newField.isRange" /> Is Range</label
+            >
+            <label class="block">
+              Min Date:
+              <input
+                type="date"
+                v-model="newField.minDate"
+                class="mt-1 w-full border rounded p-2"
+              />
+            </label>
+            <label class="block">
+              Max Date:
+              <input
+                type="date"
+                v-model="newField.maxDate"
+                class="mt-1 w-full border rounded p-2"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        @click="addFieldLive"
+        class="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+      >
+        Add Field
+      </button>
+    </fieldset>
+
+    <!-- Suggestions Panel -->
+    <fieldset class="p-4 border rounded bg-gray-50">
+      <legend class="font-semibold text-gray-700">Suggestions</legend>
       <div v-if="fieldSuggestions.length">
         <ul class="space-y-2">
           <li
@@ -213,12 +285,39 @@
       </div>
       <div v-else class="text-gray-400 text-sm">No suggestions yet.</div>
     </fieldset>
+
     <!-- Form Actions -->
-    <div class="form-actions">
-      <button type="submit" :disabled="submitting">Submit</button>
-      <button type="button" @click="undo" :disabled="!canUndo">Undo</button>
-      <button type="button" @click="redo" :disabled="!canRedo">Redo</button>
-      <button type="button" @click="resetForm">Reset</button>
+    <div class="flex flex-wrap gap-3 mt-4">
+      <button
+        type="submit"
+        :disabled="submitting"
+        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+      >
+        Submit
+      </button>
+      <button
+        type="button"
+        @click="undo"
+        :disabled="!canUndo"
+        class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+      >
+        Undo
+      </button>
+      <button
+        type="button"
+        @click="redo"
+        :disabled="!canRedo"
+        class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+      >
+        Redo
+      </button>
+      <button
+        type="button"
+        @click="resetForm"
+        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+      >
+        Reset
+      </button>
     </div>
   </form>
 </template>
@@ -243,6 +342,7 @@ const newFieldValidationRequired = ref(false);
 const newFieldValidationMinLength = ref<number | null>(null);
 const newFieldValidationMaxLength = ref<number | null>(null);
 const newFieldValidationPattern = ref<string>("");
+const fieldRefs = reactive<Record<string, HTMLElement | null>>({});
 const asyncUrl = ref("");
 function setAsyncLoader() {
   if (!asyncUrl.value) return;
@@ -473,8 +573,17 @@ async function handleSubmit() {
     const { isValid } = await validateAll(); // <-- destructure here
     if (!isValid) {
       const firstError = fieldsRef.value.find((f) => errors[f.name]);
-      if (firstError)
-        document.getElementById(firstError.id)?.focus({ preventScroll: false });
+      if (firstError) {
+        const el = fieldRefs[firstError.id];
+        if (el && typeof el.scrollIntoView === "function") {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        setTimeout(() => {
+          const input = document.getElementById(firstError.id);
+          if (input) input.focus();
+        }, 300);
+      }
     }
     emits("submit", {
       valid: isValid,
@@ -614,25 +723,4 @@ function addFieldLive() {
   outline: 2px solid #4f46e5;
   transition: outline 0.2s ease-in-out;
 }
-.add-field-panel {
-  margin: 1rem 0;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-.add-field-panel label {
-  display: block;
-  margin-bottom: 0.5rem;
-}
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-
 </style>

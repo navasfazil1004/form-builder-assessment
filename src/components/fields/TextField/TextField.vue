@@ -7,6 +7,7 @@
 
     <div class="input-row">
       <input
+        ref="inputRef"
         :id="field.id"
         :type="subTypeComputed"
         :placeholder="placeholder"
@@ -37,7 +38,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, defineExpose } from "vue";
 import type { FormField, ValidationRule } from "@/types/form.types";
 
 const props = defineProps<{
@@ -58,8 +59,14 @@ const internalValue = ref(props.modelValue ?? "");
 const isFocused = ref(false);
 
 // Focus & Blur
-function onFocus() { isFocused.value = true; emit("focus"); }
-function onBlur() { isFocused.value = false; emit("blur"); }
+function onFocus() {
+  isFocused.value = true;
+  emit("focus");
+}
+function onBlur() {
+  isFocused.value = false;
+  emit("blur");
+}
 
 // Subtype mapping
 const subTypeComputed = computed(() => props.subType || "text");
@@ -153,25 +160,77 @@ const errorMessages = computed(() => {
   const val = internalValue.value;
 
   props.field.validation?.forEach((rule: ValidationRule) => {
-
-    if (rule.type === "required" && (!val || val === "")) errors.push(rule.message || "This field is required.");
-    if (rule.type === "minLength" && String(val).length < rule.value) errors.push(rule.message || `Minimum length is ${rule.value}.`);
-    if (rule.type === "maxLength" && String(val).length > rule.value) errors.push(rule.message || `Maximum length is ${rule.value}.`);
-    if (rule.type === "pattern" && rule.value instanceof RegExp && !rule.value.test(String(val))) errors.push(rule.message || "Invalid format.");
+    if (rule.type === "required" && (!val || val === ""))
+      errors.push(rule.message || "This field is required.");
+    if (rule.type === "minLength" && String(val).length < rule.value)
+      errors.push(rule.message || `Minimum length is ${rule.value}.`);
+    if (rule.type === "maxLength" && String(val).length > rule.value)
+      errors.push(rule.message || `Maximum length is ${rule.value}.`);
+    if (
+      rule.type === "pattern" &&
+      rule.value instanceof RegExp &&
+      !rule.value.test(String(val))
+    )
+      errors.push(rule.message || "Invalid format.");
   });
 
   return errors;
 });
+const inputRef = ref<HTMLInputElement | null>(null);
+
+defineExpose({
+  focus: () => {
+    inputRef.value?.focus();
+  },
+});
 </script>
 
 <style scoped>
-.textfield { display: block; margin-bottom: 12px; }
-.label-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-.input-row { display: flex; gap: 8px; align-items: center; position: relative; }
-input { flex: 1; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; outline: none; transition: border 0.2s, box-shadow 0.2s; }
-.focused-field { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,0.2); }
-.error-field { border-color: #d00; box-shadow: 0 0 0 2px rgba(208,0,0,0.2); }
-.clear-btn { background: none; border: none; cursor: pointer; font-size: 14px; color: #555; }
-.meta-row { display: flex; justify-content: space-between; font-size: 12px; margin-top: 4px; }
-.errors { color: #d00; }
+.textfield {
+  display: block;
+  margin-bottom: 12px;
+}
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  position: relative;
+}
+input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+.focused-field {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+.error-field {
+  border-color: #d00;
+  box-shadow: 0 0 0 2px rgba(208, 0, 0, 0.2);
+}
+.clear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+}
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.errors {
+  color: #d00;
+}
 </style>

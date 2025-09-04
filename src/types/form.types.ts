@@ -37,4 +37,16 @@ export interface FormField {
   isRange?: boolean      // true if this date field is a range
   minDate?: string       // 'YYYY-MM-DD' min
   maxDate?: string       // 'YYYY-MM-DD' max
+    subType?: "text" | "email" | "password" | "number" | "tel"
+  step?: number          // for number inputs
+  min?: number           // for number inputs
+  max?: number           // for number inputs 
+  dynamic?: boolean // true if options are fetched from API
+  optionsUrl?: string // API endpoint to fetch options
+  optionsMapping?: { label: string; value: string | number | boolean; group?: string } // mapping for dynamic options
+mask?: string // input mask pattern (e.g., "(999) 999-9999" for phone numbers)
+searchable?: boolean // true if select is searchable
+layout?: 'horizontal' | 'vertical' | 'grid' // layout style
+  asyncLoader?: (() => Promise<SelectOption[]>) | null
+
 }
