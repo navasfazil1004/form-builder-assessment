@@ -86,6 +86,15 @@
     <fieldset class="p-4 border rounded space-y-4">
       <legend class="font-semibold">Add New Field</legend>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+       <label class="block">
+            Type:
+            <select v-model="newField.type" class="mt-1 w-full border rounded p-2">
+              <option value="text">Text / Input</option>
+              <option value="select">Select</option>
+              <option value="checkbox-group">Checkbox Group</option>
+              <option value="date">Date</option>
+            </select>
+          </label>
         <!-- Left Column: Basic Field Info -->
         <div class="space-y-3">
           <label class="block">
@@ -96,48 +105,25 @@
               class="mt-1 w-full border rounded p-2"
             />
           </label>
-
-          <label class="block">
-            Name:
-            <input
-              v-model="newField.name"
-              placeholder="Field name"
-              class="mt-1 w-full border rounded p-2"
-            />
-          </label>
-
-          <label class="block">
-            Placeholder:
-            <input
-              v-model="newField.placeholder"
-              placeholder="Optional placeholder"
-              class="mt-1 w-full border rounded p-2"
-            />
-          </label>
-
-          <label class="block">
-            Mask:
-            <input
-              v-model="newField.mask"
-              placeholder="e.g. (999) 999-9999"
-              class="mt-1 w-full border rounded p-2"
-            />
-          </label>
-
-          <label class="block">
-            Type:
-            <select v-model="newField.type" class="mt-1 w-full border rounded p-2">
-              <option value="text">Text / Input</option>
-              <option value="select">Select</option>
-              <option value="checkbox-group">Checkbox Group</option>
-              <option value="date">Date</option>
-            </select>
-          </label>
-        </div>
-
-        <!-- Right Column: Type-specific Options -->
-        <div class="space-y-3">
-          <!-- Text Subtype & Validation -->
+          <!-- Suggestions Panel -->
+    <fieldset class="p-4 border rounded bg-gray-50">
+      <legend class="font-semibold text-gray-700">Suggestions</legend>
+      <div v-if="fieldSuggestions.length">
+        <ul class="space-y-2">
+          <li
+            v-for="suggestion in fieldSuggestions"
+            :key="suggestion.name"
+            class="p-2 border rounded hover:bg-gray-100 cursor-pointer"
+            @click="applySuggestion(suggestion)"
+          >
+            <div class="font-medium">{{ suggestion.label }}</div>
+            <div class="text-sm text-gray-500">{{ suggestion.type }} field</div>
+          </li>
+        </ul>
+      </div>
+      <div v-else class="text-gray-400 text-sm">No suggestions yet.</div>
+    </fieldset>
+     <!-- Text Subtype & Validation -->
           <div v-if="newField.type === 'text'" class="space-y-2">
             <label class="block">
               Input Subtype:
@@ -182,6 +168,40 @@
               />
             </label>
           </div>
+
+          <label class="block">
+            Name:
+            <input
+              v-model="newField.name"
+              placeholder="Field name"
+              class="mt-1 w-full border rounded p-2"
+            />
+          </label>
+
+          <label class="block">
+            Placeholder:
+            <input
+              v-model="newField.placeholder"
+              placeholder="Optional placeholder"
+              class="mt-1 w-full border rounded p-2"
+            />
+          </label>
+
+          <label class="block">
+            Mask:
+            <input
+              v-model="newField.mask"
+              placeholder="e.g. (999) 999-9999"
+              class="mt-1 w-full border rounded p-2"
+            />
+          </label>
+
+         
+        </div>
+
+        <!-- Right Column: Type-specific Options -->
+        <div class="space-y-3">
+         
 
           <!-- Select / Checkbox Options -->
           <div
@@ -267,24 +287,7 @@
       </button>
     </fieldset>
 
-    <!-- Suggestions Panel -->
-    <fieldset class="p-4 border rounded bg-gray-50">
-      <legend class="font-semibold text-gray-700">Suggestions</legend>
-      <div v-if="fieldSuggestions.length">
-        <ul class="space-y-2">
-          <li
-            v-for="suggestion in fieldSuggestions"
-            :key="suggestion.name"
-            class="p-2 border rounded hover:bg-gray-100 cursor-pointer"
-            @click="applySuggestion(suggestion)"
-          >
-            <div class="font-medium">{{ suggestion.label }}</div>
-            <div class="text-sm text-gray-500">{{ suggestion.type }} field</div>
-          </li>
-        </ul>
-      </div>
-      <div v-else class="text-gray-400 text-sm">No suggestions yet.</div>
-    </fieldset>
+    
 
     <!-- Form Actions -->
     <div class="flex flex-wrap gap-3 mt-4">
