@@ -2,131 +2,57 @@
 
 ## 1. Project Overview
 
-The Form Builder Assessment project is a **dynamic Vue 3 form builder** that allows developers and end-users to build complex forms with minimal effort. It supports multiple field types, dynamic addition/removal, conditional visibility, validation, asynchronous data loading, and undo/redo functionality.
+The Form Builder Assessment project is a **dynamic Vue 3 form builder** enabling creation of complex forms with multiple field types, dynamic addition/removal, conditional display, validation, asynchronous option loading, and undo/redo functionality.
 
-### Goals
-- Enable rapid form creation and modification
-- Support reactive data binding
-- Provide robust validation and conditional display
-- Offer extensibility for future enhancements
+## 2. Architecture Decisions
 
+- **Component-Based Architecture**: Each field type has its own Vue SFC, promoting separation of concerns and reusability.
+- **Composition API & Composables**: Validation and form logic are encapsulated in `useFormValidation`, keeping the main component clean and maintainable.
+- **Dynamic Component Mapping**: A function maps field types to their components, allowing easy extension.
 
-## 2. Architecture & Design
+These patterns allow scalability and modularity, making it simple to add new field types or validation rules.
 
-The project follows a **component-based architecture** using Vue 3 with the Composition API. Key design patterns include:
-- **Reactive State Management**: Form data is stored in a reactive object, ensuring automatic updates.
-- **Composable Functions**: Validation logic is encapsulated in `useFormValidation` for reuse and separation of concerns.
-- **Dynamic Component Mapping**: Field types map to their respective Vue components dynamically.
+## 3. State Management Strategy
 
-**Tech Stack:**
-- Vue 3, TypeScript, Vite
-- Pinia (optional state management)
-- nanoid (unique IDs)
-- date-fns (date utilities)
-- imask (input masking)
+- **Reactive `formData` Object**: Stores current form values for all fields.
+- **`fieldsRef` Array**: Stores field definitions including dynamic fields.
+- **Undo/Redo Stacks**: Maintain snapshots of `formData` and field definitions for state restoration.
+- **Computed Properties**: `visibleFields` handles conditional field visibility automatically.
+- **Event Emission**: `submit`, `change`, and `dirty` events propagate changes to parent components.
 
+This strategy ensures predictable state updates even with complex conditional and dynamic field interactions.
 
-## 3. Component Breakdown
+## 4. Performance Optimizations
 
-### DynamicFormBuilder.vue
-- Core component that renders the form
-- Handles dynamic fields, conditional rendering, validation, and event emission
-- Manages undo/redo stacks
+- **Reactive Computed Properties**: Only recalculates field visibility when dependent values change.
+- **Debounced Updates**: For fields with intensive computation or async loading, lodash.debounce minimizes unnecessary processing.
+- **Lightweight Undo/Redo**: Snapshots use shallow JSON serialization to avoid memory bloat.
+- **Conditional Rendering with `v-if`**: Prevents unnecessary DOM updates for hidden fields.
 
-### Fields Components
-- **TextField.vue** – Standard text inputs with subtype support
-- **SelectField.vue** – Single/multi-select with async option support
-- **CheckboxGroup.vue** – Checkbox groups with layout options and min/max selection
-- **DateField.vue** – Single date or range selection
+## 5. Trade-offs
 
-### Composables
-- `useFormValidation.ts` – Provides field-level and form-level validation logic
+- Using reactive objects for state is simple but may have overhead for extremely large forms.
+- Validation runs synchronously per field, which is simpler but could be optimized with batched validation.
+- Undo/redo is limited to 50 snapshots to avoid memory issues; more sophisticated diffing could improve this.
 
-### Types
-- `form.types.ts` – TypeScript interfaces for FormField, FieldType, SelectOption, and ValidationRule
+If given more time:
+- Implement drag-and-drop field ordering
+- Use a virtualized list for very large forms
+- Optimize validation to batch updates and minimize reactivity triggers
 
+## 6. Challenges Faced
 
-## 4. Data Flow & State Management
+- **Conditional Display Complexity**: Handling nested AND/OR conditions required a recursive evaluation function to ensure proper visibility updates.
+- **Dynamic Field Removal**: Ensuring removed fields cleaned up associated data in `formData` without breaking reactivity.
+- **Async Select Loading**: Needed to support both static and API-driven options while keeping the UI responsive.
+- **Node Version Conflicts & Storybook Library**: Encountered incompatibility between Node 20+ and older Storybook packages, which required careful dependency resolution and upgrades.
 
-- **Reactive `formData` object** stores current field values.
-- **FieldsRef array** stores all field definitions including dynamic fields.
-- **Undo/Redo stacks** store snapshots of `formData` and field definitions.
-- **Computed properties** (like `visibleFields`) determine which fields should be rendered based on conditional logic.
-- **Emits** events (`submit`, `change`, `dirty`) for parent components or external handlers.
+## 7. Creative Feature
 
+- **Live Add Field Panel**: Users can define fields dynamically with validation, conditional display, async options, and layout directly in the UI. This allows building forms entirely without code.
+- Includes undo/redo integration and real-time validation feedback.
 
-## 5. Dynamic Field Logic
+---
 
-- Users can add new fields via the Add Field panel.
-- Each new field receives a **unique ID** using `nanoid`.
-- Validation, options, conditional display, and other properties are set at runtime.
-- Removal updates both the fields array and form data.
-
-
-## 6. Conditional Display Implementation
-
-- Fields can be conditionally displayed based on another field's value.
-- Operators supported: `equals`, `notEquals`, `contains`, `greaterThan`, `lessThan`
-- Supports recursive/nested conditions with AND/OR logic.
-- Computed property `visibleFields` automatically recalculates when dependencies change.
-
-
-## 7. Validation Strategy
-
-- Validation rules are defined per field:
-  - Required
-  - Min/Max length for text
-  - Regex patterns
-  - Min/Max selection for checkbox groups
-- Validation is reactive; errors are displayed inline.
-- `useFormValidation` composable handles both field-level and form-level validation.
-- On submit, all fields are validated, and the first error field is focused.
-
-
-## 8. Undo/Redo Mechanism
-
-- **Undo stack**: stores snapshots of `formData` and fields (up to 50 states)
-- **Redo stack**: allows reapplying undone changes
-- Adding or removing fields, or updating values, pushes a new snapshot to the undo stack
-- Undo/Redo actions restore both field definitions and form values
-
-
-## 9. Asynchronous Features
-
-- Select fields can fetch options from an **API endpoint** using `asyncLoader`.
-- Supports both static options and dynamic, asynchronous option loading.
-
-
-## 10. Testing Approach
-
-- **Unit tests** via Vitest
-- **UI tests** with @testing-library/vue
-- Storybook is used for interactive component testing
-- Validation, dynamic fields, conditional display, and undo/redo flows are covered
-
-
-## 11. Development Tools & Dependencies
-
-**Core:**
-- Vue 3, TypeScript, Vite
-- nanoid, date-fns, imask, lodash, lodash.debounce
-
-**Development:**
-- Vitest, @vue/test-utils, Storybook
-- vue-tsc for type checking
-
-
-## 12. Future Improvements / Considerations
-
-- Add more complex conditional logic (nested AND/OR groups) via UI
-- Integrate with backend form schema storage
-- Add drag-and-drop field reordering
-- Implement accessibility improvements (ARIA roles, keyboard navigation)
-- Enhance validation with custom user-defined rules
-- Performance optimizations for large forms
-
-
-## 13. License
-
-MIT License
+**Summary**: This technical approach balances modularity, reactivity, and performance while providing advanced dynamic features, making it suitable for scalable form-building applications.
 
