@@ -8,20 +8,17 @@
     <div class="input-row">
       <input
         :id="field.id"
-        :type="inputType"
-        :placeholder="field.placeholder"
+        :type="subTypeComputed"
+        :placeholder="placeholder"
         :value="internalValue"
         :disabled="field.disabled"
-        @input="onInput(($event.target as HTMLInputElement).value)"
+        @input="onInput($event.target.value)"
         @focus="onFocus"
         @blur="onBlur"
-        :class="{
-          'error-field': errorMessages.length,
-          'focused-field': isFocused
-        }"
+        :class="{ 'error-field': errorMessages.length, 'focused-field': isFocused }"
       />
       <button
-        v-if="internalValue !== ''"
+        v-if="internalValue && !field.disabled"
         type="button"
         @click="clear"
         class="clear-btn"
@@ -33,7 +30,7 @@
     <div class="meta-row">
       <small v-if="characterCount">{{ characterCount }}</small>
       <div v-if="errorMessages.length" class="errors">
-        <div v-for="(e, i) in errorMessages" :key="i" class="error">{{ e }}</div>
+        <div v-for="(e, i) in errorMessages" :key="i">{{ e }}</div>
       </div>
     </div>
   </label>
@@ -47,153 +44,133 @@ const props = defineProps<{
   field: FormField;
   modelValue: string | number | null;
   error?: string | string[];
-}>()
+  placeholder?: string;
+  subType?: "text" | "email" | "password" | "number" | "tel";
+}>();
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: string | number | null): void;
   (e: "focus"): void;
   (e: "blur"): void;
-}>()
+}>();
 
 const internalValue = ref(props.modelValue ?? "");
 const isFocused = ref(false);
 
-// Focus / blur
-function onFocus() {
-  isFocused.value = true;
-  emit("focus");
-}
-function onBlur() {
-  isFocused.value = false;
-  emit("blur");
-}
+// Focus & Blur
+function onFocus() { isFocused.value = true; emit("focus"); }
+function onBlur() { isFocused.value = false; emit("blur"); }
 
-// Input type
-const inputType = computed(() => {
-  const allowed = ["text", "email", "password", "number", "tel"] as const;
-  return allowed.includes(props.field.type as any)
-    ? (props.field.type as string)
-    : "text";
-});
+// Subtype mapping
+const subTypeComputed = computed(() => props.subType || "text");
 
-// Input mask (optional)
-function applyMask(value: string): string {
-  if (!props.field.mask) return value;
+// Placeholder
+const placeholder = computed(() => props.placeholder || "");
+
+// Input Masking
+function applyMask(value: string) {
+  const mask = props.field.mask;
+  if (!mask) return value;
 
   let masked = "";
-  let valueIndex = 0;
-  for (let i = 0; i < props.field.mask.length; i++) {
-    const maskChar = props.field.mask[i];
-    if (maskChar === "9") {
-      if (/\d/.test(value[valueIndex])) {
-        masked += value[valueIndex];
-        valueIndex++;
+  let valIndex = 0;
+
+  for (const m of mask) {
+    if (valIndex >= value.length) break;
+
+    if (m === "9") {
+      // Digit placeholder
+      if (/\d/.test(value[valIndex])) {
+        masked += value[valIndex++];
+      } else {
+        break;
+      }
+    } else if (m === "A") {
+      // Letter placeholder
+      if (/[A-Za-z]/.test(value[valIndex])) {
+        masked += value[valIndex++];
+      } else {
+        break;
+      }
+    } else if (m === "*") {
+      // Alphanumeric
+      if (/[A-Za-z0-9]/.test(value[valIndex])) {
+        masked += value[valIndex++];
       } else {
         break;
       }
     } else {
-      masked += maskChar;
-      if (value[valueIndex] === maskChar) valueIndex++;
+      // Static character in mask
+      masked += m;
+      if (value[valIndex] === m) valIndex++;
     }
   }
+
   return masked;
 }
 
-// Sync local value with v-model
+// Watch modelValue changes
 watch(
   () => props.modelValue,
-  (v) => (internalValue.value = v ? applyMask(String(v)) : "")
+  (v) => (internalValue.value = v != null ? applyMask(String(v)) : "")
 );
 
-// Input handler
+// Handle input
 function onInput(val: string) {
-  const masked = applyMask(val);
-  internalValue.value = masked;
-  emit("update:modelValue", masked);
+  let newVal = applyMask(val);
+
+  // Max length enforcement
+  const maxLength = props.field.validation?.find(
+    (v: ValidationRule) => v.type === "maxLength"
+  )?.value;
+  if (maxLength) newVal = newVal.slice(0, maxLength);
+
+  internalValue.value = newVal;
+
+  emit(
+    "update:modelValue",
+    subTypeComputed.value === "number" ? (newVal ? Number(newVal) : null) : newVal
+  );
 }
 
-// Clear button
+// Clear input
 function clear() {
   internalValue.value = "";
-  emit("update:modelValue", "");
+  emit("update:modelValue", subTypeComputed.value === "number" ? null : "");
 }
 
 // Character counter
 const characterCount = computed(() => {
-  const max = props.field.validation?.find((v: ValidationRule) => v.type === "maxLength")?.value;
-  if (max) return `${String(internalValue.value).length}/${max}`;
-  return null;
+  const max = props.field.validation?.find((v: ValidationRule) => v.type === "maxLength")
+    ?.value;
+  return max ? `${String(internalValue.value).length}/${max}` : null;
 });
 
 // Validation messages
 const errorMessages = computed(() => {
   if (props.error) return Array.isArray(props.error) ? props.error : [props.error];
-
   const errors: string[] = [];
   const val = internalValue.value;
 
-  if (props.field.validation) {
-    props.field.validation.forEach((rule: ValidationRule) => {
-      if (rule.type === "required" && (!val || val === "")) errors.push("This field is required.");
-      if (rule.type === "minLength" && String(val).length < rule.value)
-        errors.push(`Minimum length is ${rule.value}.`);
-      if (rule.type === "maxLength" && String(val).length > rule.value)
-        errors.push(`Maximum length is ${rule.value}.`);
-      if (rule.type === "pattern" && rule.value instanceof RegExp && !rule.value.test(String(val)))
-        errors.push("Invalid format.");
-    });
-  }
+  props.field.validation?.forEach((rule: ValidationRule) => {
+    if (rule.type === "required" && (!val || val === "")) errors.push(rule.message || "This field is required.");
+    if (rule.type === "minLength" && String(val).length < rule.value) errors.push(rule.message || `Minimum length is ${rule.value}.`);
+    if (rule.type === "maxLength" && String(val).length > rule.value) errors.push(rule.message || `Maximum length is ${rule.value}.`);
+    if (rule.type === "pattern" && rule.value instanceof RegExp && !rule.value.test(String(val))) errors.push(rule.message || "Invalid format.");
+  });
 
   return errors;
 });
 </script>
 
 <style scoped>
-.textfield {
-  display: block;
-  margin-bottom: 12px;
-}
-.label-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
-.input-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  position: relative;
-}
-input {
-  flex: 1;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  outline: none;
-  transition: border 0.2s, box-shadow 0.2s;
-}
-.focused-field {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-}
-.error-field {
-  border-color: #d00;
-  box-shadow: 0 0 0 2px rgba(208, 0, 0, 0.2);
-}
-.clear-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #555;
-}
-.meta-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  margin-top: 4px;
-}
-.errors {
-  color: #d00;
-}
+.textfield { display: block; margin-bottom: 12px; }
+.label-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.input-row { display: flex; gap: 8px; align-items: center; position: relative; }
+input { flex: 1; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; outline: none; transition: border 0.2s, box-shadow 0.2s; }
+.focused-field { border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,0.2); }
+.error-field { border-color: #d00; box-shadow: 0 0 0 2px rgba(208,0,0,0.2); }
+.clear-btn { background: none; border: none; cursor: pointer; font-size: 14px; color: #555; }
+.meta-row { display: flex; justify-content: space-between; font-size: 12px; margin-top: 4px; }
+.errors { color: #d00; }
 </style>

@@ -1,5 +1,6 @@
 <template>
   <form @submit.prevent="handleSubmit" class="form-builder">
+    <!-- Existing & dynamic fields -->
     <transition-group name="fade" tag="div">
       <template v-for="field in visibleFields" :key="field.id">
         <component
@@ -14,15 +15,18 @@
           :isRange="field.isRange"
           :minDate="field.minDate"
           :maxDate="field.maxDate"
+          :placeholder="field.placeholder"
+          :subType="field.subType"
+          :mask="field.mask"
           :class="{ 'field-focused': focusedField?.id === field.id }"
         />
-
-        <button type="button" @click="removeFieldById(field.id)" v-if="field.dynamic">
+        <button v-if="field.dynamic" type="button" @click="removeFieldById(field.id)">
           Remove
         </button>
       </template>
     </transition-group>
-    <!-- Live Add Field Panel -->
+
+    <!-- Add Field Panel -->
     <fieldset class="add-field-panel">
       <legend>Add New Field</legend>
 
@@ -37,16 +41,61 @@
       </label>
 
       <label>
+        Placeholder:
+        <input v-model="newField.placeholder" placeholder="Optional placeholder" />
+      </label>
+      <label>
+        Mask (optional, 9=digit, A=letter, *=alphanumeric):
+        <input v-model="newField.mask" placeholder="e.g. (999) 999-9999" />
+      </label>
+
+      <label>
         Type:
         <select v-model="newField.type">
-          <option value="text">Text</option>
+          <option value="text">Text / Input</option>
           <option value="select">Select</option>
           <option value="checkbox-group">Checkbox Group</option>
           <option value="date">Date</option>
         </select>
       </label>
 
-      <!-- Options for select or checkbox -->
+      <!-- Input Subtype -->
+      <label v-if="newField.type === 'text'">
+        Input Subtype:
+        <select v-model="newField.subType">
+          <option value="text">Text</option>
+          <option value="email">Email</option>
+          <option value="password">Password</option>
+          <option value="number">Number</option>
+          <option value="tel">Phone</option>
+        </select>
+      </label>
+
+      <!-- Validation -->
+      <div v-if="newField.type === 'text'" class="validation-controls">
+        <label>
+          <input type="checkbox" v-model="newFieldValidationRequired" />
+          Required
+        </label>
+        <label>
+          Min Length:
+          <input type="number" v-model.number="newFieldValidationMinLength" min="0" />
+        </label>
+        <label>
+          Max Length:
+          <input type="number" v-model.number="newFieldValidationMaxLength" min="0" />
+        </label>
+        <label>
+          Pattern (Regex):
+          <input
+            type="text"
+            v-model="newFieldValidationPattern"
+            placeholder="e.g. ^[A-Za-z]+$"
+          />
+        </label>
+      </div>
+
+      <!-- Options for select / checkbox -->
       <label v-if="newField.type === 'select' || newField.type === 'checkbox-group'">
         Options (comma separated):
         <input v-model="newField.optionsRaw" placeholder="Red,Green,Blue" />
@@ -71,6 +120,7 @@
       <button type="button" @click="addFieldLive">Add Field</button>
     </fieldset>
 
+    <!-- Form Actions -->
     <div class="form-actions">
       <button type="submit" :disabled="submitting">Submit</button>
       <button type="button" @click="undo" :disabled="!canUndo">Undo</button>
@@ -80,18 +130,27 @@
 </template>
 
 <script lang="ts" setup>
-import { nanoid } from "nanoid";
-import { debounce } from "lodash";
-
 import { ref, reactive, computed, watch, toRaw } from "vue";
-import type { FormField, FieldType, SelectOption } from "@/types/form.types";
+import { nanoid } from "nanoid";
+import type {
+  FormField,
+  FieldType,
+  SelectOption,
+  ValidationRule,
+} from "@/types/form.types";
 import TextField from "@/components/fields/TextField/TextField.vue";
 import SelectField from "@/components/fields/SelectField/SelectField.vue";
 import CheckboxGroup from "@/components/fields/CheckboxGroup/CheckboxGroup.vue";
 import DateField from "@/components/fields/DateField/DateField.vue";
 import { useFormValidation } from "@/composables/useFormValidation";
 
-/** Props & Emits */
+// --- Validation refs for new field
+const newFieldValidationRequired = ref(false);
+const newFieldValidationMinLength = ref<number | null>(null);
+const newFieldValidationMaxLength = ref<number | null>(null);
+const newFieldValidationPattern = ref<string>("");
+
+// --- Props & emits
 const props = defineProps<{ schema: FormField[]; initialValues?: Record<string, any> }>();
 const emits = defineEmits<{
   (e: "submit", payload: { valid: boolean; data: Record<string, any> }): void;
@@ -99,7 +158,7 @@ const emits = defineEmits<{
   (e: "dirty", isDirty: boolean): void;
 }>();
 
-/** Reactive state */
+// --- State
 const fieldsRef = ref<FormField[]>([...(props.schema || [])]);
 const formData = reactive<Record<string, any>>({ ...(props.initialValues ?? {}) });
 const submitting = ref(false);
@@ -108,7 +167,10 @@ const focusedField = ref<FormField | null>(null);
 
 const undoStack = ref<Record<string, any>[]>([]);
 const redoStack = ref<Record<string, any>[]>([]);
+const canUndo = computed(() => undoStack.value.length > 0);
+const canRedo = computed(() => redoStack.value.length > 0);
 
+// --- Undo / redo
 function pushUndoSnapshot() {
   const snapshot = {
     formData: JSON.parse(JSON.stringify(toRaw(formData))),
@@ -118,45 +180,31 @@ function pushUndoSnapshot() {
   if (undoStack.value.length > 50) undoStack.value.shift();
   redoStack.value.length = 0;
 }
-
-const canUndo = computed(() => undoStack.value.length > 0);
-const canRedo = computed(() => redoStack.value.length > 0);
-
 function restoreSnapshot(snapshot: { formData: any; fields: any[] }) {
-  // Clear old formData
   Object.keys(formData).forEach((key) => delete formData[key]);
-  // Assign cloned values
   Object.assign(formData, snapshot.formData);
-
-  // Replace fieldsRef array while keeping it reactive
   fieldsRef.value.splice(0, fieldsRef.value.length, ...snapshot.fields);
 }
-
 function undo() {
   if (!canUndo.value) return;
-
   redoStack.value.push({
     formData: JSON.parse(JSON.stringify(toRaw(formData))),
     fields: JSON.parse(JSON.stringify(toRaw(fieldsRef.value))),
   });
-
   const snapshot = undoStack.value.pop()!;
   restoreSnapshot(snapshot);
 }
-
 function redo() {
   if (!canRedo.value) return;
-
   undoStack.value.push({
     formData: JSON.parse(JSON.stringify(toRaw(formData))),
     fields: JSON.parse(JSON.stringify(toRaw(fieldsRef.value))),
   });
-
   const snapshot = redoStack.value.pop()!;
   restoreSnapshot(snapshot);
 }
 
-/** Conditional logic */
+// --- Conditional display
 function evalConditional(rule: any): boolean {
   if (!rule) return true;
   if (Array.isArray(rule)) {
@@ -192,7 +240,7 @@ const visibleFields = computed(() =>
   fieldsRef.value.filter((f) => evalConditional(f.conditionalDisplay))
 );
 
-/** Component mapping */
+// --- Component mapping
 const getComponent = (type: FieldType | string) => {
   switch (type) {
     case "text":
@@ -208,7 +256,7 @@ const getComponent = (type: FieldType | string) => {
   }
 };
 
-/** Validation */
+// --- Validation
 let validation = useFormValidation([...fieldsRef.value], formData);
 watch(
   () => fieldsRef.value,
@@ -219,7 +267,7 @@ watch(
 );
 const { validateAll, validateField, errors } = validation;
 
-/** Watch formData for dirty state */
+// --- Dirty check
 watch(
   [formData, fieldsRef],
   () => {
@@ -231,10 +279,10 @@ watch(
   { deep: true }
 );
 
+// --- Update field value
 function updateValue(field: FormField, value: any) {
-  const prev = formData[field.name];
-  if (prev !== value) {
-    pushUndoSnapshot(); // before change
+  if (formData[field.name] !== value) {
+    pushUndoSnapshot();
     formData[field.name] = value;
     try {
       validateField(field);
@@ -243,21 +291,7 @@ function updateValue(field: FormField, value: any) {
   }
 }
 
-/** Add/Remove dynamic fields */
-function addField(f: FormField) {
-  pushUndoSnapshot();
-
-  fieldsRef.value.push(f);
-}
-function removeFieldById(id: string) {
-  const idx = fieldsRef.value.findIndex((f) => f.id === id);
-  if (idx >= 0) {
-    pushUndoSnapshot(); // before removing
-    fieldsRef.value.splice(idx, 1);
-  }
-}
-
-/** Focus */
+// --- Focus
 function onFocus(field: FormField) {
   focusedField.value = field;
   document
@@ -265,7 +299,7 @@ function onFocus(field: FormField) {
     ?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
-/** Submit */
+// --- Submit
 async function handleSubmit() {
   submitting.value = true;
   try {
@@ -281,22 +315,14 @@ async function handleSubmit() {
   }
 }
 
-/** Live Add Field Panel */
-const newField = reactive<{
-  label: string;
-  name: string;
-  type: FieldType;
-  optionsRaw: string;
-  options?: SelectOption[];
-  dynamic?: boolean;
-  isRange?: boolean;
-  minDate?: string;
-  maxDate?: string;
-  validation?: any[];
-}>({
+// --- Reactive newField
+const newField = reactive<FormField & { optionsRaw: string }>({
+  id: "",
   label: "",
   name: "",
+  placeholder: "",
   type: "text",
+  subType: "text",
   optionsRaw: "",
   options: [],
   dynamic: true,
@@ -304,34 +330,60 @@ const newField = reactive<{
   minDate: "",
   maxDate: "",
   validation: [],
+  mask: "",
 });
 
+// --- Add new field live
 function addFieldLive() {
   if (!newField.label || !newField.name) return;
 
   const options =
     newField.type === "select" || newField.type === "checkbox-group"
-      ? newField.optionsRaw.split(",").map((o) => ({ value: o.trim(), label: o.trim() }))
+      ? newField.optionsRaw.split(",").map((o) => ({ label: o.trim(), value: o.trim() }))
       : [];
+
+  const validation: ValidationRule[] = [];
+  if (newField.type === "text") {
+    if (newFieldValidationRequired.value)
+      validation.push({ type: "required", message: "This field is required." });
+    if (newFieldValidationMinLength.value !== null)
+      validation.push({
+        type: "minLength",
+        value: newFieldValidationMinLength.value,
+        message: `Minimum length is ${newFieldValidationMinLength.value}.`,
+      });
+    if (newFieldValidationMaxLength.value !== null)
+      validation.push({
+        type: "maxLength",
+        value: newFieldValidationMaxLength.value,
+        message: `Maximum length is ${newFieldValidationMaxLength.value}.`,
+      });
+    if (newFieldValidationPattern.value)
+      validation.push({
+        type: "pattern",
+        value: new RegExp(newFieldValidationPattern.value),
+        message: "Invalid format.",
+      });
+  }
 
   const field: FormField = {
     ...newField,
     id: `field-${nanoid()}`,
-    dynamic: true,
-    validation: newField.validation || [],
     options,
-    isRange: newField.isRange || false,
-    minDate: newField.minDate || "",
-    maxDate: newField.maxDate || "",
+    validation,
+    dynamic: true,
   };
 
-  pushUndoSnapshot(); // before adding
+  pushUndoSnapshot();
   fieldsRef.value.push(field);
 
+  // Reset newField form
   Object.assign(newField, {
     label: "",
     name: "",
     type: "text",
+    subType: "text",
+    placeholder: "",
     optionsRaw: "",
     options: [],
     validation: [],
@@ -339,6 +391,10 @@ function addFieldLive() {
     minDate: "",
     maxDate: "",
   });
+  newFieldValidationRequired.value = false;
+  newFieldValidationMinLength.value = null;
+  newFieldValidationMaxLength.value = null;
+  newFieldValidationPattern.value = "";
 }
 </script>
 
