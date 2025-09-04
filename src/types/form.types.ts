@@ -34,4 +34,7 @@ export interface FormField {
   conditionalDisplay?: ConditionalRule | (ConditionalRule | { op: 'AND'|'OR' })[]
   options?: SelectOption[] // for select and checkbox-group
   multiple?: boolean // for select
+  isRange?: boolean      // true if this date field is a range
+  minDate?: string       // 'YYYY-MM-DD' min
+  maxDate?: string       // 'YYYY-MM-DD' max
 }

@@ -11,8 +11,12 @@
           @focus="onFocus(field)"
           :error="errors[field.name]"
           :options="field.options"
+          :isRange="field.isRange"
+          :minDate="field.minDate"
+          :maxDate="field.maxDate"
           :class="{ 'field-focused': focusedField?.id === field.id }"
         />
+
         <button type="button" @click="removeFieldById(field.id)" v-if="field.dynamic">
           Remove
         </button>
@@ -59,6 +63,8 @@
 </template>
 
 <script lang="ts" setup>
+import { nanoid } from "nanoid";
+
 import { ref, reactive, computed, watch, toRaw } from "vue";
 import type { FormField, FieldType, SelectOption } from "@/types/form.types";
 import TextField from "@/components/fields/TextField/TextField.vue";
@@ -249,31 +255,30 @@ const newField = reactive<{
 
 function addFieldLive() {
   if (!newField.label || !newField.name) return;
-  const allowedTypes: FieldType[] = ['text','select','checkbox-group','date'];
-  if (!allowedTypes.includes(newField.type)) newField.type = 'text';
+  const allowedTypes: FieldType[] = ["text", "select", "checkbox-group", "date"];
+  if (!allowedTypes.includes(newField.type)) newField.type = "text";
 
-  if (newField.type === 'select' || newField.type === 'checkbox-group') {
+  if (newField.type === "select" || newField.type === "checkbox-group") {
     newField.options = newField.optionsRaw
-      .split(',')
-      .map(o => ({ value: o.trim(), label: o.trim() }));
+      .split(",")
+      .map((o) => ({ value: o.trim(), label: o.trim() }));
   }
 
-  const f: FormField = { 
-    ...newField, 
-    id: `field-${nanoid()}`, 
+  const f: FormField = {
+    ...newField,
+    id: `field-${nanoid()}`,
     dynamic: true,
-    validation: newField.validation || []
+    validation: newField.validation || [],
   };
 
   addField(f);
 
-  newField.label = '';
-  newField.name = '';
-  newField.optionsRaw = '';
+  newField.label = "";
+  newField.name = "";
+  newField.optionsRaw = "";
   newField.options = [];
   newField.validation = [];
 }
-
 </script>
 
 <style scoped>
@@ -296,6 +301,13 @@ function addFieldLive() {
   display: block;
   margin-bottom: 0.5rem;
 }
-.fade-enter-active, .fade-leave-active { transition: all 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
 </style>
