@@ -6,6 +6,11 @@ export interface ValidationErrors {
   [field: string]: string[]
 }
 
+export interface ValidationResult {
+  isValid: boolean
+  errors: ValidationErrors
+}
+
 export function useFormValidation(fields: FormField[], formData: Record<string, any>) {
   const errors = reactive<ValidationErrors>({})
   const validating = ref(false)
@@ -52,16 +57,12 @@ export function useFormValidation(fields: FormField[], formData: Record<string, 
 
         case 'custom':
           if (rule.validator) {
-            const result = rule.validator(value, formData)
-            if (result instanceof Promise) {
-              try {
-                const valid = await result
-                if (!valid) fieldErrors.push(rule.message)
-              } catch {
-                fieldErrors.push(rule.message)
-              }
-            } else {
-              if (!result) fieldErrors.push(rule.message)
+            try {
+              const result = rule.validator(value, formData)
+              const valid = result instanceof Promise ? await result : result
+              if (!valid) fieldErrors.push(rule.message)
+            } catch {
+              fieldErrors.push(rule.message)
             }
           }
           break
@@ -80,24 +81,42 @@ export function useFormValidation(fields: FormField[], formData: Record<string, 
   /**
    * Validate all fields
    */
-  async function validateAll(): Promise<boolean> {
+  async function validateAll(): Promise<ValidationResult> {
     validating.value = true
     const results = await Promise.all(fields.map(f => validateField(f)))
     validating.value = false
-    return results.every(r => r)
+    return {
+      isValid: results.every(r => r),
+      errors: { ...errors },
+    }
   }
 
   /**
    * Debounced version of validateField
    */
-  const debouncedValidateField = debounce((field: FormField) => {
-    validateField(field)
+  const debouncedValidateField = debounce(async (field: FormField) => {
+    await validateField(field)
   }, 300)
 
   /**
    * Reactive global validity
    */
   const isValid = computed(() => Object.keys(errors).length === 0)
+
+  /**
+   * Watch cross-field dependencies
+   * Each field can declare `watchFields: string[]` to trigger validation when dependencies change
+   */
+  fields.forEach(field => {
+    if (field.watchFields?.length) {
+      field.watchFields.forEach(dep => {
+        watch(
+          () => formData[dep],
+          () => debouncedValidateField(field)
+        )
+      })
+    }
+  })
 
   return {
     errors,

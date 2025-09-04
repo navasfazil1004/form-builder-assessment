@@ -153,6 +153,7 @@ const errorMessages = computed(() => {
   const val = internalValue.value;
 
   props.field.validation?.forEach((rule: ValidationRule) => {
+
     if (rule.type === "required" && (!val || val === "")) errors.push(rule.message || "This field is required.");
     if (rule.type === "minLength" && String(val).length < rule.value) errors.push(rule.message || `Minimum length is ${rule.value}.`);
     if (rule.type === "maxLength" && String(val).length > rule.value) errors.push(rule.message || `Maximum length is ${rule.value}.`);

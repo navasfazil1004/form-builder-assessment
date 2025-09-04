@@ -18,4 +18,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  test: {
+    globals: true, // allows using describe, it, expect without imports
+    environment: 'jsdom', // simulate DOM
+    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'], // test files
+    setupFiles: './vitest.setup.ts', // optional: global test setup
+  },
 })

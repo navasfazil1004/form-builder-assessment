@@ -4,26 +4,51 @@ import { describe, it, expect } from 'vitest'
 
 describe('useFormValidation', () => {
   it('validates required fields', async () => {
-    const fields: FormField[] = [{ id:'1', type:'text', name:'x', label:'X', required: true }]
-    const data: Record<string,any> = { x: '' }
+    const fields: FormField[] = [
+      {
+        id: '1',
+        type: 'text',
+        name: 'x',
+        label: 'X',
+        validation: [{ type: 'required', message: 'X is required' }]
+      }
+    ]
+    const data: Record<string, any> = { x: '' }
+
     const { validateAll, errors } = useFormValidation(fields, data)
-    const ok = await validateAll()
-    expect(ok).toBe(false)
+    const result = await validateAll() // might return { errors, isValid }
+    
+    expect(result.isValid).toBe(false)
+    expect(errors['x']).toBeDefined()
     expect(errors['x'].length).toBeGreaterThan(0)
   })
 
   it('supports async custom validators', async () => {
-    const fields: FormField[] = [{
-      id:'2', type:'text', name:'u', label:'U',
-      validation: [{ type:'custom', message:'remote invalid', validator: async (val)=> val === 'ok' }]
-    }]
-    const data: Record<string,any> = { u: 'no' }
+    const fields: FormField[] = [
+      {
+        id: '2',
+        type: 'text',
+        name: 'u',
+        label: 'U',
+        validation: [
+          {
+            type: 'custom',
+            message: 'remote invalid',
+            validator: async (val: string) => val === 'ok'
+          }
+        ]
+      }
+    ]
+    const data: Record<string, any> = { u: 'no' }
+
     const { validateAll, errors } = useFormValidation(fields, data)
-    const ok = await validateAll()
-    expect(ok).toBe(false)
+    const result1 = await validateAll()
+    expect(result1.isValid).toBe(false)
     expect(errors['u'][0]).toBe('remote invalid')
+
     data.u = 'ok'
-    const ok2 = await validateAll()
-    expect(ok2).toBe(true)
+    const result2 = await validateAll()
+    expect(result2.isValid).toBe(true)
+    expect(errors['u']).toBeUndefined()
   })
 })

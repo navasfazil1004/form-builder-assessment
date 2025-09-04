@@ -7,7 +7,7 @@
           :is="getComponent(field.type)"
           :id="field.id"
           :field="field"
-          :modelValue="formData[field.name]"
+          :modelValue="formData[field.name] ?? ''"
           @update:modelValue="(val) => updateValue(field, val)"
           @focus="onFocus(field)"
           :error="errors[field.name]"
@@ -31,35 +31,35 @@
 
     <!-- Add Field Panel -->
     <!-- Conditional Display Section -->
-<fieldset v-if="fieldsRef.length" class="conditional-panel">
-  <legend>Conditional Display (optional)</legend>
+    <fieldset v-if="fieldsRef.length" class="conditional-panel">
+      <legend>Conditional Display (optional)</legend>
 
-  <label>
-    Depends on Field:
-    <select v-model="newField.conditionalField">
-      <option value="">None</option>
-      <option v-for="f in fieldsRef" :key="f.id" :value="f.name">
-        {{ f.label }}
-      </option>
-    </select>
-  </label>
+      <label>
+        Depends on Field:
+        <select v-model="newField.conditionalField">
+          <option value="">None</option>
+          <option v-for="f in fieldsRef" :key="f.id" :value="f.name">
+            {{ f.label }}
+          </option>
+        </select>
+      </label>
 
-  <label v-if="newField.conditionalField">
-    Operator:
-    <select v-model="newField.conditionalOperator">
-      <option value="equals">Equals</option>
-      <option value="notEquals">Not Equals</option>
-      <option value="contains">Contains</option>
-      <option value="greaterThan">Greater Than</option>
-      <option value="lessThan">Less Than</option>
-    </select>
-  </label>
+      <label v-if="newField.conditionalField">
+        Operator:
+        <select v-model="newField.conditionalOperator">
+          <option value="equals">Equals</option>
+          <option value="notEquals">Not Equals</option>
+          <option value="contains">Contains</option>
+          <option value="greaterThan">Greater Than</option>
+          <option value="lessThan">Less Than</option>
+        </select>
+      </label>
 
-  <label v-if="newField.conditionalField">
-    Value:
-    <input v-model="newField.conditionalValue" placeholder="Value to compare" />
-  </label>
-</fieldset>
+      <label v-if="newField.conditionalField">
+        Value:
+        <input v-model="newField.conditionalValue" placeholder="Value to compare" />
+      </label>
+    </fieldset>
 
     <fieldset class="add-field-panel">
       <legend>Add New Field</legend>
@@ -232,11 +232,9 @@ function setAsyncLoader() {
   };
 }
 
-
-
-
 // --- Props & emits
 const props = defineProps<{ schema: FormField[]; initialValues?: Record<string, any> }>();
+
 const emits = defineEmits<{
   (e: "submit", payload: { valid: boolean; data: Record<string, any> }): void;
   (e: "change", payload: { name: string; value: any; data: Record<string, any> }): void;
@@ -395,17 +393,18 @@ function onFocus(field: FormField) {
 async function handleSubmit() {
   submitting.value = true;
   try {
-    const valid = await validateAll();
-    if (!valid) {
+    const { isValid } = await validateAll(); // <-- destructure here
+    if (!isValid) {
       const firstError = fieldsRef.value.find((f) => errors[f.name]);
       if (firstError)
         document.getElementById(firstError.id)?.focus({ preventScroll: false });
     }
-    emits("submit", { valid, data: JSON.parse(JSON.stringify(toRaw(formData))) });
+    emits("submit", { valid: isValid, data: JSON.parse(JSON.stringify(toRaw(formData))) });
   } finally {
     submitting.value = false;
   }
 }
+
 
 const newField = reactive<FormField & { optionsRaw: string }>({
   id: "",
@@ -439,11 +438,8 @@ function removeFieldById(id: string) {
   }
 }
 
-
 // --- Add new field live
 function addFieldLive() {
-
-
   if (!newField.label || !newField.name) return;
 
   const validation: ValidationRule[] = [];
@@ -499,12 +495,12 @@ function addFieldLive() {
     dynamic: true,
   };
   if (newField.conditionalField) {
-  field.conditionalDisplay = {
-    field: newField.conditionalField,
-    operator: newField.conditionalOperator,
-    value: newField.conditionalValue
-  };
-}
+    field.conditionalDisplay = {
+      field: newField.conditionalField,
+      operator: newField.conditionalOperator,
+      value: newField.conditionalValue,
+    };
+  }
   pushUndoSnapshot();
   fieldsRef.value.push(field);
 
