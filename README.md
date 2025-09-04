@@ -19,13 +19,17 @@ A **dynamic Vue 3 form builder** with support for:
 3. [Scripts](#scripts)
 4. [Project Structure](#project-structure)
 5. [Dependencies](#dependencies)
-6. [Component Usage](#component-usage)
-7. [Dynamic Fields](#dynamic-fields)
-8. [Conditional Display](#conditional-display)
-9. [Validation](#validation)
-10. [Undo / Redo](#undo--redo)
-11. [Styling](#styling)
-12. [License](#license)
+6. [Architecture Overview](#architecture-overview)
+7. [Component Usage](#component-usage)
+8. [Dynamic Fields](#dynamic-fields)
+9. [Conditional Display](#conditional-display)
+10. [Validation](#validation)
+11. [Undo / Redo](#undo--redo)
+12. [Performance Optimization](#performance-optimization)
+13. [Accessibility](#accessibility)
+14. [Browser Compatibility](#browser-compatibility)
+15. [Styling](#styling)
+16. [License](#license)
 
 ---
 
@@ -116,82 +120,75 @@ form-builder-assessment/
 └─ README.md
 ```
 
-- `components/` – Vue SFC components for form builder and fields
-- `composables/` – Vue composables (e.g., validation logic)
-- `types/` – TypeScript type definitions
-- `storybook/` – Storybook configuration
-- `public/` – Static assets
-
 ---
 
 ## Dependencies
 
-- **Vue 3** – Core framework
-- **Pinia** – Optional state management
-- **nanoid** – Unique ID generation
-- **date-fns** – Date utilities
-- **imask** – Input masking
-- **lodash & lodash.debounce** – Utilities
-
-Dev tools:
+- Vue 3 – Core framework
+- Pinia – Optional state management
+- nanoid – Unique ID generation
+- date-fns – Date utilities
+- imask – Input masking
+- lodash & lodash.debounce – Utilities
 - TypeScript, Vite, Vitest, Storybook, vue-tsc
+
+---
+
+## Architecture Overview
+
+**Component-based modular architecture**:
+
+- `DynamicFormBuilder.vue`: Main orchestration component
+- Field Components: TextField, SelectField, CheckboxGroup, DateField
+- Composables: `useFormValidation` handles all validation logic
+- State: Reactive `formData` + `fieldsRef`
+- Undo/Redo: Snapshot-based
+
+**Diagram:**
+```
+[DynamicFormBuilder] --> renders --> [Field Components]
+[DynamicFormBuilder] --> uses --> [useFormValidation]
+[DynamicFormBuilder] --> maintains --> [formData, fieldsRef, undo/redo stacks]
+```
 
 ---
 
 ## Component Usage
 
 ```vue
-<template>
-  <DynamicFormBuilder
-    :schema="fields"
-    :initialValues="{ firstName: 'John' }"
-    @submit="onSubmit"
-    @change="onChange"
-    @dirty="onDirty"
-  />
-</template>
-
-<script setup lang="ts">
-import DynamicFormBuilder from '@/components/DynamicFormBuilder.vue';
-import type { FormField } from '@/types/form.types';
-
-const fields: FormField[] = [
-  { id: 'f1', name: 'firstName', label: 'First Name', type: 'text' },
-  { id: 'f2', name: 'favoriteColor', label: 'Favorite Color', type: 'select', options: [{ label: 'Red', value: 'red' }] },
-];
-
-function onSubmit({ valid, data }: { valid: boolean; data: Record<string, any> }) {
-  console.log('Submit:', valid, data);
-}
-
-function onChange({ name, value, data }: { name: string; value: any; data: Record<string, any> }) {
-  console.log('Change:', name, value, data);
-}
-
-function onDirty(isDirty: boolean) {
-  console.log('Dirty state:', isDirty);
-}
-</script>
+<DynamicFormBuilder
+  :schema="fields"
+  :initialValues="{ firstName: 'John' }"
+  @submit="onSubmit"
+  @change="onChange"
+  @dirty="onDirty"
+/>
 ```
+
+### Props
+- `schema: FormField[]` – Array of field definitions
+- `initialValues: Record<string, any>` – Optional initial form values
+
+### Events
+- `submit({ valid, data })`
+- `change({ name, value, data })`
+- `dirty(isDirty: boolean)`
 
 ---
 
 ## Dynamic Fields
-
-- Add fields live using the **Add Field** panel
-- Configure label, name, type, placeholder, mask, options, validation, conditional display, date configurations
-- Click **Add Field** to append it to the form
+- Add fields live using the Add Field panel
+- Configure label, name, type, placeholder, mask, options, validation, conditional display
+- Click Add Field to append
 
 ---
 
 ## Conditional Display
-
-- Fields appear based on other field values
-- Operators: `equals`, `notEquals`, `contains`, `greaterThan`, `lessThan`
-- Supports nested AND/OR logic
+- Based on other field values
+- Operators: equals, notEquals, contains, greaterThan, lessThan
+- Nested AND/OR logic supported
 
 Example:
-
 ```ts
 conditionalDisplay: {
   field: 'country',
@@ -203,38 +200,53 @@ conditionalDisplay: {
 ---
 
 ## Validation
-
 - Text fields: required, min/max length, regex
 - Checkbox group: required, min/max selection
-- Validation errors are reactive and displayed per field
+- Reactive inline error display
 
 ---
 
 ## Undo / Redo
-
 ```vue
 <button @click="undo" :disabled="!canUndo">Undo</button>
 <button @click="redo" :disabled="!canRedo">Redo</button>
 ```
-
 - Stores up to 50 snapshots
 - Redo stack clears on new actions
 
 ---
 
+## Performance Optimization
+- Reactive computed properties for conditional fields
+- Debounced input updates using lodash.debounce
+- Lightweight JSON snapshots for undo/redo
+- Conditional rendering with `v-if`
+
+---
+
+## Accessibility
+- Focus highlight on active fields
+- Keyboard navigation supported via standard form controls
+- ARIA attributes can be added for enhanced accessibility
+
+---
+
+## Browser Compatibility
+- Tested on latest Chrome, Firefox, Edge, and Safari
+- Node 20+ recommended for local development
+- Storybook supports modern browsers; Node version conflicts may require dependency adjustments
+
+---
+
 ## Styling
-
 - Focused field highlight:
-
 ```css
 .field-focused {
   outline: 2px solid #4f46e5;
   transition: outline 0.2s ease-in-out;
 }
 ```
-
 - Fade transitions for field add/remove:
-
 ```css
 .fade-enter-active,
 .fade-leave-active {
