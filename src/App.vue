@@ -1,85 +1,40 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import FormBuilder from '@/components/FormBuilder/FormBuilder.vue'
+import { formSchema } from '@/types/formSchema'
+import { ref } from 'vue'
+
+// Reactive form state
+const formData = ref<Record<string, any>>({})
+
+// Handle submit from FormBuilder
+function handleSubmit(data: Record<string, any>) {
+  console.log('✅ Form Submitted:', data)
+  alert('Form submitted! Check console for data.')
+}
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+  <main class="p-6">
+    <h1 class="text-2xl font-bold mb-6">Dynamic Form Builder Demo</h1>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+    <!-- Pass schema + v-model to FormBuilder -->
+    <FormBuilder
+      :schema="formSchema"
+      v-model="formData"
+      @submit="handleSubmit"
+    />
 
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
-
-  <RouterView />
+    <!-- Debugging: show current form state -->
+    <pre class="mt-6 bg-gray-100 p-4 rounded">
+{{ formData }}
+    </pre>
+  </main>
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+main {
+  max-width: 640px;
+  margin: auto;
+  font-family: sans-serif;
 }
 </style>
