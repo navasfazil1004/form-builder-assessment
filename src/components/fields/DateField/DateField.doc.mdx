@@ -1,0 +1,37 @@
+import { Meta, Story, Canvas, Props } from '@storybook/addon-docs';
+import DateField from './DateField.vue';
+
+<Meta title="Form/DateField" component={DateField} />
+
+# DateField
+
+A Vue 3 date picker component that supports:
+
+- Single date selection
+- Date range selection
+- Min and max date validation
+- Error messages
+- Focus events
+
+## Usage
+
+```vue
+<script setup lang="ts">
+import DateField from './DateField.vue';
+import { ref } from 'vue';
+
+const singleDate = ref('');
+const dateRange = ref({ start: '', end: '' });
+</script>
+
+<!-- Single date -->
+<DateField
+  field={{ id: 'single', label: 'Select a date' }}
+  v-model="singleDate"
+/>
+
+<!-- Date range -->
+<DateField
+  field={{ id: 'range', label: 'Select a range', isRange: true }}
+  v-model="dateRange"
+/>

@@ -1,0 +1,36 @@
+import { Meta, Story, Canvas, Props } from '@storybook/addon-docs';
+import CheckboxGroup from './CheckboxGroup.vue';
+
+<Meta title="Form/CheckboxGroup" component={CheckboxGroup} />
+
+# CheckboxGroup
+
+A multi-select checkbox component with:
+
+- Searchable options
+- Select All / Clear All functionality
+- Layout options: vertical, horizontal, grid
+- Async option loading
+- Validation and error messages
+
+## Usage
+
+```vue
+<script setup lang="ts">
+import CheckboxGroup from './CheckboxGroup.vue';
+import { ref } from 'vue';
+
+const selected = ref([]);
+const options = [
+  { value: 'apple', label: 'Apple' },
+  { value: 'banana', label: 'Banana' },
+  { value: 'carrot', label: 'Carrot' },
+];
+</script>
+
+<CheckboxGroup
+  field={{ id: 'fruits', label: 'Choose fruits', layout: 'vertical', validation: [{ type: 'required', message: 'Select at least one' }] }}
+  :options="options"
+  v-model="selected"
+  searchable
+/>
