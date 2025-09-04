@@ -31,6 +31,9 @@
 
     <!-- Add Field Panel -->
     <!-- Conditional Display Section -->
+    <!-- Real-Time Suggestions Panel -->
+  
+
     <fieldset v-if="fieldsRef.length" class="conditional-panel">
       <legend>Conditional Display (optional)</legend>
 
@@ -192,12 +195,30 @@
       </div>
       <button type="button" @click="addFieldLive">Add Field</button>
     </fieldset>
+  <fieldset class="suggestions-panel mt-4 p-4 border rounded bg-gray-50">
+      <legend class="font-semibold text-gray-700">Suggestions</legend>
 
+      <div v-if="fieldSuggestions.length">
+        <ul class="space-y-2">
+          <li
+            v-for="suggestion in fieldSuggestions"
+            :key="suggestion.name"
+            class="p-2 border rounded hover:bg-gray-100 cursor-pointer"
+            @click="applySuggestion(suggestion)"
+          >
+            <div class="font-medium">{{ suggestion.label }}</div>
+            <div class="text-sm text-gray-500">{{ suggestion.type }} field</div>
+          </li>
+        </ul>
+      </div>
+      <div v-else class="text-gray-400 text-sm">No suggestions yet.</div>
+    </fieldset>
     <!-- Form Actions -->
     <div class="form-actions">
       <button type="submit" :disabled="submitting">Submit</button>
       <button type="button" @click="undo" :disabled="!canUndo">Undo</button>
       <button type="button" @click="redo" :disabled="!canRedo">Redo</button>
+      <button type="button" @click="resetForm">Reset</button>
     </div>
   </form>
 </template>
@@ -230,6 +251,15 @@ function setAsyncLoader() {
     const data = await res.json();
     return data.map((o: any) => ({ label: o.label, value: o.value }));
   };
+}
+function resetForm() {
+  pushUndoSnapshot();
+  Object.keys(formData).forEach((key) => (formData[key] = ""));
+  fieldsRef.value.forEach((f) => {
+    if (f.type === "checkbox-group") formData[f.name] = [];
+  });
+  isDirty.value = false;
+  emits("dirty", false);
 }
 
 // --- Props & emits
@@ -285,6 +315,53 @@ function redo() {
   });
   const snapshot = redoStack.value.pop()!;
   restoreSnapshot(snapshot);
+}
+
+// --- Field Suggestions Logic
+const commonFieldSuggestions = [
+  {
+    label: "First Name",
+    name: "firstName",
+    type: "text",
+    subType: "text",
+    validation: [{ type: "required", message: "Required" }],
+  },
+  { label: "Last Name", name: "lastName", type: "text", subType: "text" },
+  {
+    label: "Email",
+    name: "email",
+    type: "text",
+    subType: "email",
+    validation: [{ type: "required", message: "Required" }],
+  },
+  { label: "Phone Number", name: "phone", type: "text", subType: "tel" },
+  {
+    label: "Country",
+    name: "country",
+    type: "select",
+    options: [
+      { label: "USA", value: "USA" },
+      { label: "Canada", value: "Canada" },
+    ],
+  },
+];
+
+const fieldSuggestions = computed(() => {
+  const input = newField.label.toLowerCase().trim();
+  if (!input) return [];
+  return commonFieldSuggestions.filter((s) => s.label.toLowerCase().includes(input));
+});
+
+// Apply suggestion to Add Field form
+function applySuggestion(suggestion: any) {
+  Object.assign(newField, {
+    label: suggestion.label,
+    name: suggestion.name,
+    type: suggestion.type,
+    subType: suggestion.subType ?? "text",
+    options: suggestion.options ?? [],
+    validation: suggestion.validation ?? [],
+  });
 }
 
 // --- Conditional display
@@ -399,12 +476,14 @@ async function handleSubmit() {
       if (firstError)
         document.getElementById(firstError.id)?.focus({ preventScroll: false });
     }
-    emits("submit", { valid: isValid, data: JSON.parse(JSON.stringify(toRaw(formData))) });
+    emits("submit", {
+      valid: isValid,
+      data: JSON.parse(JSON.stringify(toRaw(formData))),
+    });
   } finally {
     submitting.value = false;
   }
 }
-
 
 const newField = reactive<FormField & { optionsRaw: string }>({
   id: "",
@@ -554,4 +633,6 @@ function addFieldLive() {
   opacity: 0;
   transform: translateY(-10px);
 }
+
+
 </style>
