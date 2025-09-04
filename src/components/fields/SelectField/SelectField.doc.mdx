@@ -1,0 +1,37 @@
+import { Meta, Story, Canvas, Props } from '@storybook/addon-docs';
+import SelectField from './SelectField.vue';
+
+<Meta title="Form/SelectField" component={SelectField} />
+
+# SelectField
+
+A fully-featured select field component supporting:
+
+- Single and multiple selections
+- Searchable dropdowns
+- Async option loading
+- Grouped options
+- Keyboard navigation
+- Custom tags display for multi-select
+
+## Usage
+
+```vue
+<script setup lang="ts">
+import SelectField from './SelectField.vue';
+
+const options = [
+  { value: 'apple', label: 'Apple', group: 'Fruits' },
+  { value: 'banana', label: 'Banana', group: 'Fruits' },
+  { value: 'carrot', label: 'Carrot', group: 'Vegetables' },
+];
+
+const selected = ref<string | string[]>('');
+</script>
+
+<SelectField
+  field={{ id: 'my-select', label: 'Select an item', multiple: true }}
+  :options="options"
+  v-model="selected"
+  searchable
+/>
