@@ -30,6 +30,37 @@
     </transition-group>
 
     <!-- Add Field Panel -->
+    <!-- Conditional Display Section -->
+<fieldset v-if="fieldsRef.length" class="conditional-panel">
+  <legend>Conditional Display (optional)</legend>
+
+  <label>
+    Depends on Field:
+    <select v-model="newField.conditionalField">
+      <option value="">None</option>
+      <option v-for="f in fieldsRef" :key="f.id" :value="f.name">
+        {{ f.label }}
+      </option>
+    </select>
+  </label>
+
+  <label v-if="newField.conditionalField">
+    Operator:
+    <select v-model="newField.conditionalOperator">
+      <option value="equals">Equals</option>
+      <option value="notEquals">Not Equals</option>
+      <option value="contains">Contains</option>
+      <option value="greaterThan">Greater Than</option>
+      <option value="lessThan">Less Than</option>
+    </select>
+  </label>
+
+  <label v-if="newField.conditionalField">
+    Value:
+    <input v-model="newField.conditionalValue" placeholder="Value to compare" />
+  </label>
+</fieldset>
+
     <fieldset class="add-field-panel">
       <legend>Add New Field</legend>
 
@@ -200,6 +231,10 @@ function setAsyncLoader() {
     return data.map((o: any) => ({ label: o.label, value: o.value }));
   };
 }
+
+
+
+
 // --- Props & emits
 const props = defineProps<{ schema: FormField[]; initialValues?: Record<string, any> }>();
 const emits = defineEmits<{
@@ -256,20 +291,23 @@ function redo() {
 
 // --- Conditional display
 function evalConditional(rule: any): boolean {
-  if (!rule) return true;
+  if (!rule) return true; // No condition = always visible
+
   if (Array.isArray(rule)) {
     let result = true;
     let currentOp: "AND" | "OR" = "AND";
+
     for (const part of rule) {
       if (part && part.op) {
-        currentOp = part.op;
+        currentOp = part.op; // Set AND/OR
         continue;
       }
-      const r = evalConditional(part);
+      const r = evalConditional(part); // Recursive
       result = currentOp === "AND" ? result && r : result || r;
     }
     return result;
   }
+
   const left = formData[rule.field];
   switch (rule.operator) {
     case "equals":
@@ -332,8 +370,12 @@ watch(
 // --- Update field value
 function updateValue(field: FormField, value: any) {
   if (formData[field.name] !== value) {
-    pushUndoSnapshot();
+    pushUndoSnapshot(); // preserve undo
     formData[field.name] = value;
+
+    // Revalidate conditional fields
+    // visibleFields is reactive, so it updates automatically
+
     try {
       validateField(field);
     } catch {}
@@ -388,18 +430,20 @@ const newField = reactive<FormField & { optionsRaw: string }>({
 function removeFieldById(id: string) {
   const index = fieldsRef.value.findIndex((f) => f.id === id);
   if (index !== -1) {
-    pushUndoSnapshot(); // optional: keep undo/redo working
+    pushUndoSnapshot();
+    const field = fieldsRef.value[index]; // <--- move this line before splice
     fieldsRef.value.splice(index, 1);
-    // Also remove the value from formData
-    const field = fieldsRef.value[index];
     if (field?.name && formData[field.name] !== undefined) {
       delete formData[field.name];
     }
   }
 }
 
+
 // --- Add new field live
 function addFieldLive() {
+
+
   if (!newField.label || !newField.name) return;
 
   const validation: ValidationRule[] = [];
@@ -454,7 +498,13 @@ function addFieldLive() {
     validation,
     dynamic: true,
   };
-
+  if (newField.conditionalField) {
+  field.conditionalDisplay = {
+    field: newField.conditionalField,
+    operator: newField.conditionalOperator,
+    value: newField.conditionalValue
+  };
+}
   pushUndoSnapshot();
   fieldsRef.value.push(field);
 
