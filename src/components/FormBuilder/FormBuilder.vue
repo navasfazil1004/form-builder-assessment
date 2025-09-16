@@ -1,632 +1,805 @@
 <template>
-  <div
-  v-if="!showFormBuilder"
-  class="flex items-center justify-center min-h-screen"
->
-  <button
-    @click="showFormBuilder = true"
-    class="px-6 py-4 text-white bg-blue-600 hover:bg-blue-700 rounded-2xl text-xl shadow-lg transition transform hover:scale-105"
-  >
-     Start Form Builder
-  </button>
-</div>
-
-<!-- Form Builder Main Content -->
-<div v-else class="min-h-screen flex flex-col bg-gray-100 rounded-2xl shadow-2xl">
-    <header
-      class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white shadow rounded-2xl shadow-lg"
-    >
-      <div class="max-w-7xl mx-auto px-6 py-12 flex flex-col items-center text-center">
-        <h1 class="text-3xl md:text-4xl font-extrabold drop-shadow">
-          Dynamic Form Builder
-        </h1>
-        <p class="mt-2 text-lg md:text-xl text-white/90">
-          Create, configure, and preview forms instantly
-        </p>
-      </div>
-    </header>
-    <main class="flex-1 mx-auto w-full p-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- LEFT: CONFIG PANEL -->
-        <section class="space-y-6 rounded sticky top-6 h-fit">
-          <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Field Configuration</h2>
-
-            <fieldset
-              class="p-5 border border-gray-200 rounded-xl bg-gray-50 shadow-sm space-y-6"
-            >
-              <legend class="font-semibold text-blue-600">Add New Field</legend>
-              <transition name="fade-slide" mode="out-in">
-                <div v-if="step === 1">
-                  <label class="block text-sm font-medium text-gray-700 mb-2"
-                    >Type:</label
-                  >
-                  <select
-                    v-model="multiStepField.type"
-                    class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="text">Text / Input</option>
-                    <option value="select">Select</option>
-                    <option value="checkbox-group">Checkbox Group</option>
-                    <option value="date">Date</option>
-                  </select>
-                  <button
-                    class="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-                    @click="nextStep"
-                    :disabled="!multiStepField.type"
-                  >
-                    Next
-                  </button>
-                </div>
-                <div v-else-if="step === 2">
-                  <label class="block text-sm font-medium text-gray-700 mb-2"
-                    >Label:</label
-                  >
-                  <input
-                    v-model="multiStepField.label"
-                    class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Field label"
-                  />
-                 <fieldset class="p-4 border rounded-xl bg-white shadow-md relative" v-if="fieldSuggestions.length>0">
-  <legend class="font-semibold text-gray-700">Suggestions</legend>
-
-  <transition-group
-    name="fade-slide"
-    tag="ul"
-    class="space-y-2 mt-2"
-  >
-    <li
-      v-for="suggestion in fieldSuggestions"
-      :key="suggestion.name"
-      class="p-3 border border-gray-200 rounded-lg hover:shadow-lg hover:bg-blue-50 cursor-pointer transition-all duration-300"
-      @click="applySuggestion(suggestion)"
-    >
-      <div class="font-medium text-gray-800">{{ suggestion.label }}</div>
-      <div class="text-sm text-gray-500">{{ suggestion.type }} field</div>
-    </li>
-  </transition-group>
-
-  <!-- Only show when input > 2 and no matching suggestions -->
-  <div
-    v-if="newField.label.length > 2 && fieldSuggestions.length === 0"
-    class="text-gray-400 text-sm mt-2 text-center italic"
-  >
-    No suggestions found
-  </div>
-</fieldset>
-
-                  <label class="block text-sm font-medium text-gray-700 mb-2"
-                    >Name:</label
-                  >
-                  <input
-                    v-model="multiStepField.name"
-                    class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Field name"
-                  />
-                  <label class="block text-sm font-medium text-gray-700 mb-2"
-                    >Placeholder:</label
-                  >
-                  <input
-                    v-model="multiStepField.placeholder"
-                    class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Optional placeholder"
-                  />
-                  <button
-                    class="mt-4 px-4 py-2 bg-gray-300 rounded mr-2"
-                    @click="prevStep"
-                  >
-                    Back
-                  </button>
-                  <button
-                    class="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-                    @click="nextStep"
-                    :disabled="!multiStepField.label || !multiStepField.name"
-                  >
-                    Next
-                  </button>
-                </div>
-                <div v-else-if="step === 3">
-                  <!-- TEXT FIELD OPTIONS -->
-                  <div
-                    v-if="multiStepField.type === 'text'"
-                    class="grid grid-cols-1 md:grid-cols-1 gap-4"
-                  >
-                    <div class="flex flex-col md:flex-row gap-4 w-full">
-                      <!-- Subtype -->
-                      <div class="flex flex-col flex-1">
-                        <label class="block text-sm font-medium text-gray-700 mb-2"
-                          >Subtype:</label
-                        >
-                        <select
-                          v-model="multiStepField.subType"
-                          class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="text">Text</option>
-                          <option value="email">Email</option>
-                          <option value="password">Password</option>
-                          <option value="number">Number</option>
-                          <option value="tel">Phone</option>
-                        </select>
-                      </div>
-
-                      <!-- Mask -->
-                      <div class="flex flex-col flex-1">
-                        <label class="block text-sm font-medium text-gray-700 mb-2"
-                          >Mask:</label
-                        >
-                        <input
-                          v-model="multiStepField.mask"
-                          placeholder="e.g. (999) 999-9999"
-                          class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Required + Min + Max in one row -->
-                    <div class="flex flex-wrap md:flex-nowrap items-end w-full gap-6">
-                      <!-- Required -->
-                      <label class="flex items-center gap-2 cursor-pointer min-w-[120px]">
-                        <input
-                          type="checkbox"
-                          v-model="multiStepField.required"
-                          class="accent-blue-500"
-                        />
-                        <span class="text-sm font-medium text-gray-700 select-none"
-                          >Required</span
-                        >
-                      </label>
-
-                      <!-- Min Length -->
-                      <div class="flex flex-col min-w-[120px]">
-                        <label class="text-sm font-medium text-gray-700 mb-1"
-                          >Min Length:</label
-                        >
-                        <input
-                          type="number"
-                          v-model.number="multiStepField.minLength"
-                          min="0"
-                          class="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-
-                      <!-- Max Length -->
-                      <div class="flex flex-col min-w-[120px]">
-                        <label class="text-sm font-medium text-gray-700 mb-1"
-                          >Max Length:</label
-                        >
-                        <input
-                          type="number"
-                          v-model.number="multiStepField.maxLength"
-                          min="0"
-                          class="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
-
-                    <!-- Pattern -->
-                    <div class="flex flex-col">
-                      <label class="block text-sm font-medium text-gray-700 mb-2"
-                        >Pattern (Regex):</label
-                      >
-                      <input
-                        v-model="multiStepField.pattern"
-                        placeholder="e.g. ^[A-Za-z]+$"
-                        class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- SELECT / CHECKBOX-GROUP OPTIONS -->
-                  <div
-                    v-if="
-                      multiStepField.type === 'select' ||
-                      multiStepField.type === 'checkbox-group'
-                    "
-                  >
-                    <label class="block text-sm font-medium text-gray-700 mb-2"
-                      >Options (comma separated):</label
-                    >
-                    <input
-                      v-model="multiStepField.optionsRaw"
-                      class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Red, Green, Blue"
-                    />
-                  </div>
-
-                  <!-- Checkbox layout -->
-                  <div v-if="multiStepField.type === 'checkbox-group'">
-                    <label class="block text-sm font-medium text-gray-700 mb-2"
-                      >Layout:</label
-                    >
-                    <select
-                      v-model="multiStepField.layout"
-                      class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="vertical">Vertical</option>
-                      <option value="horizontal">Horizontal</option>
-                      <option value="grid">Grid</option>
-                    </select>
-                  </div>
-
-                  <!-- Select specific options -->
-                  <div v-if="multiStepField.type === 'select'">
-                    <label
-                      class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
-                    >
-                      <input
-                        type="checkbox"
-                        v-model="multiStepField.multiple"
-                        class="accent-blue-500"
-                      />
-                      Multiple selection
-                    </label>
-                    <label
-                      class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
-                    >
-                      <input
-                        type="checkbox"
-                        v-model="multiStepField.searchable"
-                        class="accent-blue-500"
-                      />
-                      Searchable
-                    </label>
-                    <label class="block text-sm font-medium text-gray-700 mb-2"
-                      >Async URL:</label
-                    >
-                    <input
-                      v-model="multiStepField.asyncUrl"
-                      class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter API URL"
-                    />
-                    <button
-                      type="button"
-                      @click="setMultiStepAsyncLoader"
-                      class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition mb-2"
-                    >
-                      Load
-                    </button>
-                  </div>
-
-                  <!-- DATE FIELD OPTIONS -->
-                  <div v-if="multiStepField.type === 'date'">
-                    <label
-                      class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
-                    >
-                      <input
-                        type="checkbox"
-                        v-model="multiStepField.isRange"
-                        class="accent-blue-500"
-                      />
-                      Is Range
-                    </label>
-                    <label class="block text-sm font-medium text-gray-700 mb-2"
-                      >Min Date:</label
-                    >
-                    <input
-                      type="date"
-                      v-model="multiStepField.minDate"
-                      class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <label class="block text-sm font-medium text-gray-700 mb-2"
-                      >Max Date:</label
-                    >
-                    <input
-                      type="date"
-                      v-model="multiStepField.maxDate"
-                      class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <!-- CONDITIONAL DISPLAY -->
-                  <div v-if="fieldsRef.length" class="mt-6">
-                    <h4 class="text-sm font-semibold text-gray-700 mb-2">
-                      Conditional Display
-                    </h4>
-
-                    <div
-                      class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4"
-                    >
-                      <!-- Depends on Field -->
-                      <div class="flex flex-col md:flex-row md:items-center gap-4">
-                        <label
-                          class="block text-sm font-medium text-gray-700 w-full md:w-1/3"
-                        >
-                          Depends on Field:
-                        </label>
-                        <select
-                          v-model="multiStepField.conditionalField"
-                          class="w-full md:w-2/3 p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="">None</option>
-                          <option v-for="f in fieldsRef" :key="f.id" :value="f.name">
-                            {{ f.label }}
-                          </option>
-                        </select>
-                      </div>
-
-                      <!-- Operator & Value: Only show if a field is selected -->
-                      <div
-                        v-if="multiStepField.conditionalField"
-                        class="grid grid-cols-1 md:grid-cols-2 gap-4"
-                      >
-                        <!-- Operator -->
-                        <div class="flex flex-col">
-                          <label class="text-sm font-medium text-gray-700 mb-1"
-                            >Operator:</label
-                          >
-                          <select
-                            v-model="multiStepField.conditionalOperator"
-                            class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="equals">Equals</option>
-                            <option value="notEquals">Not Equals</option>
-                            <option value="contains">Contains</option>
-                            <option value="greaterThan">Greater Than</option>
-                            <option value="lessThan">Less Than</option>
-                          </select>
-                        </div>
-
-                        <!-- Value -->
-                        <div class="flex flex-col">
-                          <label class="text-sm font-medium text-gray-700 mb-1"
-                            >Value:</label
-                          >
-                          <input
-                            v-model="multiStepField.conditionalValue"
-                            placeholder="Value to compare"
-                            class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Step Buttons -->
-                  <div class="flex gap-2 mt-4">
-                    <button class="px-4 py-2 bg-gray-300 rounded" @click="prevStep">
-                      Back
-                    </button>
-                    <button
-                      class="px-4 py-2 bg-blue-500 text-white rounded"
-                      @click="nextStep"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-
-                <div v-else-if="step === 4" class="text-gray-800">
-                  <h3 class="font-semibold mb-2">Review</h3>
-                  <div class="mb-2"><b>Type:</b> {{ multiStepField.type }}</div>
-                  <div class="mb-2"><b>Label:</b> {{ multiStepField.label }}</div>
-                  <div class="mb-2"><b>Name:</b> {{ multiStepField.name }}</div>
-                  <div v-if="multiStepField.placeholder">
-                    <b>Placeholder:</b> {{ multiStepField.placeholder }}
-                  </div>
-                  <div v-if="multiStepField.optionsRaw">
-                    <b>Options:</b> {{ multiStepField.optionsRaw }}
-                  </div>
-                  <div v-if="multiStepField.required"><b>Required</b></div>
-                  <div v-if="multiStepField.subType">
-                    <b>Subtype:</b> {{ multiStepField.subType }}
-                  </div>
-                  <div v-if="multiStepField.mask">
-                    <b>Mask:</b> {{ multiStepField.mask }}
-                  </div>
-                  <div v-if="multiStepField.minLength">
-                    <b>Min Length:</b> {{ multiStepField.minLength }}
-                  </div>
-                  <div v-if="multiStepField.maxLength">
-                    <b>Max Length:</b> {{ multiStepField.maxLength }}
-                  </div>
-                  <div v-if="multiStepField.pattern">
-                    <b>Pattern:</b> {{ multiStepField.pattern }}
-                  </div>
-                  <div v-if="multiStepField.layout">
-                    <b>Layout:</b> {{ multiStepField.layout }}
-                  </div>
-                  <div v-if="multiStepField.multiple"><b>Multiple:</b> Yes</div>
-                  <div v-if="multiStepField.searchable"><b>Searchable:</b> Yes</div>
-                  <div v-if="multiStepField.asyncUrl">
-                    <b>Async URL:</b> {{ multiStepField.asyncUrl }}
-                  </div>
-                  <div v-if="multiStepField.isRange"><b>Is Range:</b> Yes</div>
-                  <div v-if="multiStepField.minDate">
-                    <b>Min Date:</b> {{ multiStepField.minDate }}
-                  </div>
-                  <div v-if="multiStepField.maxDate">
-                    <b>Max Date:</b> {{ multiStepField.maxDate }}
-                  </div>
-                  <div v-if="multiStepField.conditionalField">
-                    <b>Conditional:</b> {{ multiStepField.conditionalField }}
-                    {{ multiStepField.conditionalOperator }}
-                    {{ multiStepField.conditionalValue }}
-                  </div>
-                  <button
-                    class="mt-4 px-4 py-2 bg-gray-300 rounded mr-2"
-                    @click="prevStep"
-                  >
-                    Back
-                  </button>
-                  <button
-                    class="mt-4 px-4 py-2 bg-green-500 text-white rounded"
-                    @click="addMultiStepField"
-                  >
-                    Add Field
-                  </button>
-                </div>
-                <div v-else>
-                  <button
-                    class="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-                    @click="resetMultiStep"
-                  >
-                    Add Another Field
-                  </button>
-                </div>
-              </transition>
-            </fieldset>
-          </div>
-        </section>
-
-        <!-- RIGHT: PREVIEW FORM -->
-        <section class="space-y-6">
-          <!-- Preview Header -->
-          <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Form Preview</h2>
-            <p class="text-gray-500 mb-6">
-              This section shows a live preview of your form. You can interact with it and
-              see validations in action.
-            </p>
-
-            <form @submit.prevent="handleSubmit" class="space-y-6">
-              <draggable
-                :list="visibleFields"
-                item-key="id"
-                handle=".drag-handle"
-                class="space-y-4"
-              >
-                <template #item="{ element: field, index }">
-                  <transition-group
-                    name="fade"
-                    tag="div"
-                    enter-active-class="transition duration-500 ease-out"
-                    leave-active-class="transition duration-300 ease-in"
-                  >
-                    <div v-if="visibleFields.includes(field)">
-                      <div
-                        class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-gray-50 rounded-xl shadow-sm hover:shadow-md transition"
-                        :ref="(el) => (fieldRefs[field.id] = el)"
-                      >
-                        <!-- Field component -->
-                        <div class="flex-1 w-full md:mr-4">
-                          <component
-                            :is="getComponent(field.type)"
-                            :id="field.id"
-                            :field="field"
-                            :modelValue="formData[field.name] ?? ''"
-                            @update:modelValue="(val) => updateValue(field, val)"
-                            @focus="onFocus(field)"
-                            :error="errors[field.name]"
-                            :options="field.options"
-                            :searchable="field.searchable"
-                            :multiple="field.multiple"
-                            :asyncLoader="field.asyncLoader"
-                            :isRange="field.isRange"
-                            :minDate="field.minDate"
-                            :maxDate="field.maxDate"
-                            :placeholder="field.placeholder"
-                            :subType="field.subType"
-                            :mask="field.mask"
-                            class="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-
-                        <!-- Actions: Drag handle + Remove -->
-                        <div class="flex items-center gap-2 mt-2 md:mt-0">
-                          <span
-                            class="drag-handle cursor-move p-2 text-gray-500 hover:text-gray-700"
-                            >⠿</span
-                          >
-                          <button
-                            type="button"
-                            @click="removeFieldById(field.id)"
-                            class="p-2 rounded-lg text-red-500 hover:bg-red-100 transition"
-                            title="Remove field"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </transition-group>
-                </template>
-              </draggable>
-
-              <!-- Form Actions -->
-              <div class="flex flex-wrap justify-end gap-3 mt-6">
-                <button
-                  type="submit"
-                  :disabled="submitting"
-                  class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition disabled:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  Submit
-                </button>
-
-                <button
-                  type="button"
-                  @click="undo"
-                  :disabled="!canUndo"
-                  class="px-5 py-2 rounded-lg transition text-gray-800 bg-gray-100 hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  ⬅ Undo
-                </button>
-
-                <button
-                  type="button"
-                  @click="redo"
-                  :disabled="!canRedo"
-                  class="px-5 py-2 rounded-lg transition text-gray-800 bg-gray-100 hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  Redo ➡
-                </button>
-
-                <button
-                  type="button"
-                  @click="resetForm"
-                  class="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:ring-2 focus:ring-red-400 focus:ring-offset-1 transition"
-                >
-                  🔄 Reset
-                </button>
-              </div>
-            </form>
-          </div>
-        </section>
-      </div>
-    </main>
-
-    <!-- Submission Modal -->
+  <transition name="curtain" mode="out-in">
+    <!-- Landing Page -->
     <div
-      v-if="showSubmitModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      v-if="!showFormBuilder"
+      key="landing"
+      class="relative flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white"
     >
-      <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 relative">
-        <h3 class="text-xl font-bold mb-4 text-green-900">Form Submitted!</h3>
-        <button
-          @click="showSubmitModal = false"
-          class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-lg"
-        >
-          ✕
-        </button>
-
-        <div class="mb-4">
-          <h4 class="font-semibold mb-1 text-red-800">JSON Response:</h4>
-          <pre class="bg-gray-100 p-3 rounded text-sm overflow-x-auto text-gray-800">{{
-            submittedData?.json
-          }}</pre>
-        </div>
-
-        <div>
-          <h4 class="font-semibold mb-1 text-red-800">Preview:</h4>
-          <pre
-            class="bg-gray-100 p-3 rounded text-sm whitespace-pre-wrap text-gray-800"
-            >{{ submittedData?.email }}</pre
+      <div class="text-center max-w-2xl px-6">
+        <!-- Logo -->
+        <div class="flex justify-center mb-6">
+          <div
+            class="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center shadow-lg"
           >
+            <span class="text-3xl font-extrabold"
+              ><img src="/src/assets/form.png"
+            /></span>
+          </div>
         </div>
 
+        <!-- Title -->
+        <h1 class="text-4xl md:text-5xl font-extrabold drop-shadow mb-4">
+          Welcome to Dynamic Form Builder
+        </h1>
+
+        <!-- Description -->
+        <p class="text-lg md:text-xl text-white/90 mb-8">
+          Create, configure, and preview your forms instantly with an intuitive builder.
+        </p>
+
+        <!-- Start Button -->
         <button
-          @click="showSubmitModal = false"
-          class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+          @click="showFormBuilder = true"
+          class="px-8 py-4 bg-white text-blue-600 font-semibold text-lg rounded-2xl shadow-lg hover:bg-gray-100 transform hover:scale-105 transition-all duration-200"
         >
-          Close
+          Start Building
         </button>
       </div>
     </div>
 
-    <!-- FOOTER -->
-    <footer class="bg-gray-900 text-white text-center py-6 rounded-b-2xl mt-6">
-      <p class="text-sm">© 2025 Dynamic Form Builder.</p>
-    </footer>
-  </div>
+    <!-- Form Builder -->
+    <div
+      v-else
+      key="builder"
+      class="min-h-screen flex flex-col bg-gray-100 rounded-2xl shadow-2xl"
+    >
+      <header
+        class="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white shadow rounded-2xl shadow-lg"
+      >
+        <div class="max-w-7xl mx-auto px-6 py-12 flex flex-col items-center text-center">
+          <h1 class="text-3xl md:text-4xl font-extrabold drop-shadow">
+            Dynamic Form Builder
+          </h1>
+          <p class="mt-2 text-lg md:text-xl text-white/90">
+            Create, configure, and preview forms instantly
+          </p>
+        </div>
+      </header>
+      <main class="flex-1 mx-auto w-full p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <!-- LEFT: CONFIG PANEL -->
+          <section class="space-y-6 rounded sticky top-6 h-fit">
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+              <h2 class="text-2xl font-bold text-gray-800 mb-4">Field Configuration</h2>
+
+              <fieldset
+                class="p-5 border border-gray-200 rounded-xl bg-gray-50 shadow-sm space-y-6"
+              >
+                <legend class="font-semibold text-blue-600">Add New Field</legend>
+                <transition name="fade-slide" mode="out-in">
+                  <div v-if="step === 1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2"
+                      >Type:</label
+                    >
+                    <select
+                      v-model="multiStepField.type"
+                      class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="text">Text / Input</option>
+                      <option value="select">Select</option>
+                      <option value="checkbox-group">Checkbox Group</option>
+                      <option value="date">Date</option>
+                    </select>
+                    <button
+                      class="mt-4 px-6 py-2 rounded-xl bg-blue-600 text-white font-medium shadow-md hover:bg-blue-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-70 transition-all duration-200 ease-in-out"
+                      @click="nextStep"
+                      :disabled="!multiStepField.type"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                  <div v-else-if="step === 2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2"
+                      >Label:</label
+                    >
+                    <input
+                      v-model="multiStepField.label"
+                      class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Field label"
+                    />
+                    <fieldset
+                      class="p-4 border rounded-xl bg-white shadow-md relative"
+                      v-if="fieldSuggestions.length > 0"
+                    >
+                      <legend class="font-semibold text-gray-700">Suggestions</legend>
+
+                      <transition-group name="fade-slide" tag="ul" class="space-y-2 mt-2">
+                        <li
+                          v-for="suggestion in fieldSuggestions"
+                          :key="suggestion.name"
+                          class="p-3 border border-gray-200 rounded-lg hover:shadow-lg hover:bg-blue-50 cursor-pointer transition-all duration-300"
+                          @click="applySuggestion(suggestion)"
+                        >
+                          <div class="font-medium text-gray-800">
+                            {{ suggestion.label }}
+                          </div>
+                          <div class="text-sm text-gray-500">
+                            {{ suggestion.type }} field
+                          </div>
+                        </li>
+                      </transition-group>
+
+                      <!-- Only show when input > 2 and no matching suggestions -->
+                      <div
+                        v-if="newField.label.length > 2 && fieldSuggestions.length === 0"
+                        class="text-gray-400 text-sm mt-2 text-center italic"
+                      >
+                        No suggestions found
+                      </div>
+                    </fieldset>
+
+                    <label class="block text-sm font-medium text-gray-700 mb-2"
+                      >Name:</label
+                    >
+                    <input
+                      v-model="multiStepField.name"
+                      class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Field name"
+                    />
+                    <label class="block text-sm font-medium text-gray-700 mb-2"
+                      >Placeholder:</label
+                    >
+                    <input
+                      v-model="multiStepField.placeholder"
+                      class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Optional placeholder"
+                    />
+                    <div class="mt-6 flex justify-end gap-3">
+                      <!-- Back Button -->
+                      <button
+                        class="px-6 py-2 rounded-xl bg-gray-200 text-gray-700 font-medium shadow-sm hover:bg-gray-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200 ease-in-out"
+                        @click="prevStep"
+                      >
+                        ← Back
+                      </button>
+
+                      <!-- Next Button -->
+                      <button
+                        class="px-6 py-2 rounded-xl bg-blue-600 text-white font-medium shadow-md hover:bg-blue-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-70 transition-all duration-200 ease-in-out"
+                        @click="nextStep"
+                        :disabled="!multiStepField.label || !multiStepField.name"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                  <div v-else-if="step === 3">
+                    <!-- TEXT FIELD OPTIONS -->
+                    <div
+                      v-if="multiStepField.type === 'text'"
+                      class="grid grid-cols-1 md:grid-cols-1 gap-4"
+                    >
+                      <div class="flex flex-col md:flex-row gap-4 w-full">
+                        <!-- Subtype -->
+                        <div class="flex flex-col flex-1">
+                          <label class="block text-sm font-medium text-gray-700 mb-2"
+                            >Subtype:</label
+                          >
+                          <select
+                            v-model="multiStepField.subType"
+                            class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="text">Text</option>
+                            <option value="email">Email</option>
+                            <option value="password">Password</option>
+                            <option value="number">Number</option>
+                            <option value="tel">Phone</option>
+                          </select>
+                        </div>
+
+                        <!-- Mask -->
+                        <div class="flex flex-col flex-1">
+                          <label class="block text-sm font-medium text-gray-700 mb-2"
+                            >Mask:</label
+                          >
+                          <input
+                            v-model="multiStepField.mask"
+                            placeholder="e.g. (999) 999-9999"
+                            class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Required + Min + Max in one row -->
+                      <div class="flex flex-wrap md:flex-nowrap items-end w-full gap-6">
+                        <!-- Required -->
+                        <label
+                          class="flex items-center gap-2 cursor-pointer min-w-[120px]"
+                        >
+                          <input
+                            type="checkbox"
+                            v-model="multiStepField.required"
+                            class="accent-blue-500"
+                          />
+                          <span class="text-sm font-medium text-gray-700 select-none"
+                            >Required</span
+                          >
+                        </label>
+
+                        <!-- Min Length -->
+                        <div class="flex flex-col min-w-[120px]">
+                          <label class="text-sm font-medium text-gray-700 mb-1"
+                            >Min Length:</label
+                          >
+                          <input
+                            type="number"
+                            v-model.number="multiStepField.minLength"
+                            min="0"
+                            class="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+
+                        <!-- Max Length -->
+                        <div class="flex flex-col min-w-[120px]">
+                          <label class="text-sm font-medium text-gray-700 mb-1"
+                            >Max Length:</label
+                          >
+                          <input
+                            type="number"
+                            v-model.number="multiStepField.maxLength"
+                            min="0"
+                            class="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Pattern -->
+                      <div class="flex flex-col">
+                        <label class="block text-sm font-medium text-gray-700 mb-2"
+                          >Pattern (Regex):</label
+                        >
+                        <input
+                          v-model="multiStepField.pattern"
+                          placeholder="e.g. ^[A-Za-z]+$"
+                          class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- SELECT / CHECKBOX-GROUP OPTIONS -->
+                    <div
+                      v-if="
+                        multiStepField.type === 'select' ||
+                        multiStepField.type === 'checkbox-group'
+                      "
+                    >
+                      <label class="block text-sm font-medium text-gray-700 mb-2"
+                        >Options (comma separated):</label
+                      >
+                      <input
+                        v-model="multiStepField.optionsRaw"
+                        class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Red, Green, Blue"
+                      />
+                    </div>
+
+                    <!-- Checkbox layout -->
+                    <div v-if="multiStepField.type === 'checkbox-group'">
+                      <label class="block text-sm font-medium text-gray-700 mb-2"
+                        >Layout:</label
+                      >
+                      <select
+                        v-model="multiStepField.layout"
+                        class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="vertical">Vertical</option>
+                        <option value="horizontal">Horizontal</option>
+                        <option value="grid">Grid</option>
+                      </select>
+                    </div>
+
+                    <!-- Select specific options -->
+                    <div v-if="multiStepField.type === 'select'">
+                      <label
+                        class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
+                      >
+                        <input
+                          type="checkbox"
+                          v-model="multiStepField.multiple"
+                          class="accent-blue-500"
+                        />
+                        Multiple selection
+                      </label>
+                      <label
+                        class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
+                      >
+                        <input
+                          type="checkbox"
+                          v-model="multiStepField.searchable"
+                          class="accent-blue-500"
+                        />
+                        Searchable
+                      </label>
+                      <label class="block text-sm font-medium text-gray-700 mb-2"
+                        >Async URL:</label
+                      >
+                      <input
+                        v-model="multiStepField.asyncUrl"
+                        class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter API URL"
+                      />
+                      <button
+                        type="button"
+                        @click="setMultiStepAsyncLoader"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition mb-2"
+                      >
+                        Load
+                      </button>
+                    </div>
+
+                    <!-- DATE FIELD OPTIONS -->
+                    <div v-if="multiStepField.type === 'date'">
+                      <label
+                        class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2"
+                      >
+                        <input
+                          type="checkbox"
+                          v-model="multiStepField.isRange"
+                          class="accent-blue-500"
+                        />
+                        Is Range
+                      </label>
+                      <label class="block text-sm font-medium text-gray-700 mb-2"
+                        >Min Date:</label
+                      >
+                      <input
+                        type="date"
+                        v-model="multiStepField.minDate"
+                        class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <label class="block text-sm font-medium text-gray-700 mb-2"
+                        >Max Date:</label
+                      >
+                      <input
+                        type="date"
+                        v-model="multiStepField.maxDate"
+                        class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    <!-- CONDITIONAL DISPLAY -->
+                    <div v-if="fieldsRef.length" class="mt-6">
+                      <h4 class="text-sm font-semibold text-gray-700 mb-2">
+                        Conditional Display
+                      </h4>
+
+                      <div
+                        class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 space-y-4"
+                      >
+                        <!-- Depends on Field -->
+                        <div class="flex flex-col md:flex-row md:items-center gap-4">
+                          <label
+                            class="block text-sm font-medium text-gray-700 w-full md:w-1/3"
+                          >
+                            Depends on Field:
+                          </label>
+                          <select
+                            v-model="multiStepField.conditionalField"
+                            class="w-full md:w-2/3 p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">None</option>
+                            <option v-for="f in fieldsRef" :key="f.id" :value="f.name">
+                              {{ f.label }}
+                            </option>
+                          </select>
+                        </div>
+
+                        <!-- Operator & Value: Only show if a field is selected -->
+                        <div
+                          v-if="multiStepField.conditionalField"
+                          class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                        >
+                          <!-- Operator -->
+                          <div class="flex flex-col">
+                            <label class="text-sm font-medium text-gray-700 mb-1"
+                              >Operator:</label
+                            >
+                            <select
+                              v-model="multiStepField.conditionalOperator"
+                              class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="equals">Equals</option>
+                              <option value="notEquals">Not Equals</option>
+                              <option value="contains">Contains</option>
+                              <option value="greaterThan">Greater Than</option>
+                              <option value="lessThan">Less Than</option>
+                            </select>
+                          </div>
+
+                          <!-- Value -->
+                          <div class="flex flex-col">
+                            <label class="text-sm font-medium text-gray-700 mb-1"
+                              >Value:</label
+                            >
+                            <input
+                              v-model="multiStepField.conditionalValue"
+                              placeholder="Value to compare"
+                              class="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Step Buttons -->
+                    <div class="flex gap-3 mt-6 justify-end">
+                      <!-- Back -->
+                      <button
+                        class="px-5 py-2 rounded-xl bg-gray-200 text-gray-700 font-medium shadow-sm hover:bg-gray-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-all duration-200 ease-in-out"
+                        @click="prevStep"
+                      >
+                        ← Back
+                      </button>
+
+                      <!-- Next -->
+                      <button
+                        class="px-5 py-2 rounded-xl bg-blue-600 text-white font-medium shadow-md hover:bg-blue-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:bg-blue-300 disabled:cursor-not-allowed disabled:opacity-70 transition-all duration-200 ease-in-out"
+                        @click="nextStep"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+
+                  <div v-else-if="step === 4" class="text-gray-800">
+                    <h3 class="font-semibold mb-2">Review</h3>
+                    <div class="mb-2"><b>Type:</b> {{ multiStepField.type }}</div>
+                    <div class="mb-2"><b>Label:</b> {{ multiStepField.label }}</div>
+                    <div class="mb-2"><b>Name:</b> {{ multiStepField.name }}</div>
+                    <div v-if="multiStepField.placeholder">
+                      <b>Placeholder:</b> {{ multiStepField.placeholder }}
+                    </div>
+                    <div v-if="multiStepField.optionsRaw">
+                      <b>Options:</b> {{ multiStepField.optionsRaw }}
+                    </div>
+                    <div v-if="multiStepField.required"><b>Required</b></div>
+                    <div v-if="multiStepField.subType">
+                      <b>Subtype:</b> {{ multiStepField.subType }}
+                    </div>
+                    <div v-if="multiStepField.mask">
+                      <b>Mask:</b> {{ multiStepField.mask }}
+                    </div>
+                    <div v-if="multiStepField.minLength">
+                      <b>Min Length:</b> {{ multiStepField.minLength }}
+                    </div>
+                    <div v-if="multiStepField.maxLength">
+                      <b>Max Length:</b> {{ multiStepField.maxLength }}
+                    </div>
+                    <div v-if="multiStepField.pattern">
+                      <b>Pattern:</b> {{ multiStepField.pattern }}
+                    </div>
+                    <div v-if="multiStepField.layout">
+                      <b>Layout:</b> {{ multiStepField.layout }}
+                    </div>
+                    <div v-if="multiStepField.multiple"><b>Multiple:</b> Yes</div>
+                    <div v-if="multiStepField.searchable"><b>Searchable:</b> Yes</div>
+                    <div v-if="multiStepField.asyncUrl">
+                      <b>Async URL:</b> {{ multiStepField.asyncUrl }}
+                    </div>
+                    <div v-if="multiStepField.isRange"><b>Is Range:</b> Yes</div>
+                    <div v-if="multiStepField.minDate">
+                      <b>Min Date:</b> {{ multiStepField.minDate }}
+                    </div>
+                    <div v-if="multiStepField.maxDate">
+                      <b>Max Date:</b> {{ multiStepField.maxDate }}
+                    </div>
+                    <div v-if="multiStepField.conditionalField">
+                      <b>Conditional:</b> {{ multiStepField.conditionalField }}
+                      {{ multiStepField.conditionalOperator }}
+                      {{ multiStepField.conditionalValue }}
+                    </div>
+                    <div class="flex space-x-4 mt-6 justify-end">
+                      <!-- Back Button -->
+                      <button
+                        @click="prevStep"
+                        class="px-5 py-2 rounded-xl bg-gray-100 text-gray-700 font-medium shadow-sm hover:bg-gray-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-all duration-200 ease-in-out"
+                      >
+                        ← Back
+                      </button>
+
+                      <!-- Add Field Button -->
+                      <button
+                        @click="addMultiStepField"
+                        :disabled="isAddingField"
+                        class="px-6 py-2 rounded-xl bg-blue-600 text-white font-semibold flex items-center justify-center space-x-2 shadow-md hover:bg-blue-700 hover:shadow-lg active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ease-in-out"
+                      >
+                        <span v-if="!isAddingField">Add Field</span>
+                        <svg
+                          v-else
+                          class="w-5 h-5 animate-spin text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                          ></circle>
+                          <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                          ></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-else>
+                    <button
+                      @click="resetMultiStep"
+                      class="mt-4 px-6 py-2 rounded-xl bg-green-600 text-white font-semibold flex items-center space-x-2 shadow-md hover:bg-green-700 hover:shadow-lg active:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 transition-all duration-200 ease-in-out"
+                    >
+                      <!-- Plus Icon -->
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+
+                      <span>Add Another Field</span>
+                    </button>
+                  </div>
+                </transition>
+              </fieldset>
+            </div>
+          </section>
+
+          <!-- RIGHT: PREVIEW FORM -->
+          <section class="space-y-6">
+            <!-- Preview Header -->
+            <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+              <h2 class="text-2xl font-bold text-gray-800 mb-4">Form Preview</h2>
+              <p class="text-gray-500 mb-6">
+                This section shows a live preview of your form. You can interact with it
+                and see validations in action.
+              </p>
+
+              <form @submit.prevent="handleSubmit" class="space-y-6">
+                <draggable
+                  :list="fieldsRef"
+                  item-key="id"
+                  handle=".drag-handle"
+                  class="space-y-4"
+                >
+                  <template #item="{ element: field, index }">
+                    <transition-group
+                      name="fade"
+                      tag="div"
+                      enter-active-class="transition duration-500 ease-out"
+                      leave-active-class="transition duration-300 ease-in"
+                    >
+                      <div v-if="visibleFields.includes(field)">
+                        <div
+                          class="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-gray-50 rounded-xl shadow-sm hover:shadow-md transition"
+                          :ref="(el) => (fieldRefs[field.id] = el)"
+                        >
+                          <!-- Field component -->
+                          <div class="flex-1 w-full md:mr-4">
+                            <component
+                              :is="getComponent(field.type)"
+                              :id="field.id"
+                              :field="field"
+                              :modelValue="formData[field.name] ?? ''"
+                              @update:modelValue="(val) => updateValue(field, val)"
+                              @focus="onFocus(field)"
+                              :error="errors[field.name]"
+                              :options="field.options"
+                              :searchable="field.searchable"
+                              :multiple="field.multiple"
+                              :asyncLoader="field.asyncLoader"
+                              :isRange="field.isRange"
+                              :minDate="field.minDate"
+                              :maxDate="field.maxDate"
+                              :placeholder="field.placeholder"
+                              :subType="field.subType"
+                              :mask="field.mask"
+                              class="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+
+                          <!-- Actions: Drag handle + Remove -->
+                          <div class="flex items-center gap-2 mt-2 md:mt-0">
+                            <span
+                              class="drag-handle cursor-move p-2 text-gray-500 hover:text-gray-700"
+                              >⠿</span
+                            >
+                            <button
+                              type="button"
+                              @click="removeFieldById(field.id)"
+                              class="p-2 rounded-lg text-red-500 hover:bg-red-100 transition"
+                              title="Remove field"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </transition-group>
+                  </template>
+                </draggable>
+
+                <!-- Form Actions -->
+                <div class="flex flex-wrap justify-end gap-4 mt-8">
+                  <!-- Submit -->
+                  <button
+                    type="submit"
+                    :disabled="submitting"
+                    class="relative inline-flex items-center gap-2 px-6 py-2.5 text-white rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 shadow-md hover:shadow-lg hover:from-blue-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                  >
+                    <svg
+                      v-if="submitting"
+                      class="w-5 h-5 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="white"
+                        stroke-width="4"
+                      />
+                      <path
+                        class="opacity-75"
+                        fill="white"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                      />
+                    </svg>
+                    <svg
+                      v-else
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    <span>{{ submitting ? "Submitting..." : "Submit" }}</span>
+                  </button>
+
+                  <!-- Undo -->
+                  <button
+                    type="button"
+                    @click="undo"
+                    :disabled="!canUndo"
+                    class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/80 text-gray-700 shadow hover:shadow-md border border-gray-200 hover:bg-gray-50 active:scale-95 focus:outline-none focus:ring-2 focus:ring-gray-300 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 14l-4-4m0 0l4-4m-4 4h16"
+                      />
+                    </svg>
+                    <span>Undo</span>
+                  </button>
+
+                  <!-- Redo -->
+                  <button
+                    type="button"
+                    @click="redo"
+                    :disabled="!canRedo"
+                    class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/80 text-gray-700 shadow hover:shadow-md border border-gray-200 hover:bg-gray-50 active:scale-95 focus:outline-none focus:ring-2 focus:ring-gray-300 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 10l4 4m0 0l-4 4m4-4H5"
+                      />
+                    </svg>
+                    <span>Redo</span>
+                  </button>
+
+                  <!-- Reset -->
+                  <button
+                    type="button"
+                    @click="resetForm"
+                    class="inline-flex items-center gap-2 px-6 py-2.5 text-white rounded-xl bg-gradient-to-r from-red-500 to-red-600 shadow-md hover:shadow-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 active:scale-95 transition"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v6h6M20 20v-6h-6M4 20h6v-6M20 4h-6v6"
+                      />
+                    </svg>
+                    <span>Reset</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <!-- Submission Modal -->
+      <div
+        v-if="showSubmitModal"
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      >
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 relative">
+          <h3 class="text-xl font-bold mb-4 text-green-900">Form Submitted!</h3>
+          <button
+            @click="showSubmitModal = false"
+            class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-lg"
+          >
+            ✕
+          </button>
+
+          <div class="mb-4">
+            <h4 class="font-semibold mb-1 text-red-800">JSON Response:</h4>
+            <pre class="bg-gray-100 p-3 rounded text-sm overflow-x-auto text-gray-800">{{
+              submittedData?.json
+            }}</pre>
+          </div>
+
+          <div>
+            <h4 class="font-semibold mb-1 text-red-800">Preview:</h4>
+            <pre
+              class="bg-gray-100 p-3 rounded text-sm whitespace-pre-wrap text-gray-800"
+              >{{ submittedData?.email }}</pre
+            >
+          </div>
+
+          <button
+            @click="showSubmitModal = false"
+            class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <footer class="bg-gray-900 text-white text-center py-6 rounded-b-2xl mt-6">
+        <p class="text-sm">© 2025 Dynamic Form Builder.</p>
+      </footer>
+    </div>
+  </transition>
 </template>
 <script lang="ts" setup>
 import { ref, reactive, computed, watch, toRaw } from "vue";
@@ -905,7 +1078,7 @@ async function handleSubmit() {
     const formJson = JSON.parse(JSON.stringify(toRaw(formData)));
 
     if (!isValid) {
-      // Prepare error list
+      // Collect error messages
       const errorMessages: Record<string, string> = {};
       Object.entries(errors).forEach(([key, val]) => {
         if (val) errorMessages[key] = val;
@@ -918,8 +1091,9 @@ async function handleSubmit() {
           .join("\n"),
         errors: errorMessages,
       };
-
-      showSubmitModal.value = true;
+      setTimeout(() => {
+        showSubmitModal.value = true;
+      }, 600);
 
       // Scroll to first error
       const firstError = fieldsRef.value.find((f) => errors[f.name]);
@@ -934,7 +1108,9 @@ async function handleSubmit() {
         }, 300);
       }
 
-      return; // Stop submission
+      //  Small delay so spinner feels natural
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return;
     }
 
     // Valid submission
@@ -950,6 +1126,8 @@ async function handleSubmit() {
       valid: isValid,
       data: formJson,
     });
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
   } finally {
     submitting.value = false;
   }
@@ -1154,7 +1332,14 @@ function setMultiStepAsyncLoader() {
     }
   };
 }
-function addMultiStepField() {
+const isAddingField = ref(false);
+
+async function addMultiStepField() {
+  isAddingField.value = true; // start loader
+
+  // simulate small delay for transition effect (300ms)
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
   const validation: ValidationRule[] = [];
   if (multiStepField.type === "text") {
     if (multiStepField.required)
@@ -1178,6 +1363,7 @@ function addMultiStepField() {
         message: "Invalid format.",
       });
   }
+
   if (multiStepField.type === "checkbox-group") {
     if (multiStepField.required)
       validation.push({ type: "required", message: "This field is required." });
@@ -1194,6 +1380,7 @@ function addMultiStepField() {
         message: `Select no more than ${multiStepField.maxLength} option(s).`,
       });
   }
+
   const field: FormField = {
     id: `field-${nanoid()}`,
     type: multiStepField.type,
@@ -1218,6 +1405,7 @@ function addMultiStepField() {
     validation,
     dynamic: true,
   };
+
   if (multiStepField.conditionalField) {
     field.conditionalDisplay = {
       field: multiStepField.conditionalField,
@@ -1225,9 +1413,12 @@ function addMultiStepField() {
       value: multiStepField.conditionalValue,
     };
   }
-  fieldsRef.value.push(field);
+
+  fieldsRef.value.push(field); // add field
   resetMultiStep();
   step.value = 5;
+
+  isAddingField.value = false; // stop loader
 }
 </script>
 
@@ -1260,5 +1451,29 @@ function addMultiStepField() {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateX(-20px);
+}
+
+/* Curtain style transition */
+.curtain-enter-active,
+.curtain-leave-active {
+  transition: all 0.8s ease-in-out;
+}
+
+.curtain-enter-from {
+  opacity: 0;
+  transform: translateY(50px) scale(0.95);
+}
+.curtain-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.curtain-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.curtain-leave-to {
+  opacity: 0;
+  transform: translateY(-50px) scale(0.95);
 }
 </style>
