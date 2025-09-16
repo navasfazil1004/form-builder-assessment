@@ -1,8 +1,8 @@
 <template>
-  <label :for="field.id" class="datefield">
-    <span>{{ field.label }}</span>
+  <label :for="field.id" class="block mb-4 text-gray-800">
+    <span class="font-medium">{{ field.label }}</span>
 
-    <div class="date-inputs">
+    <div class="mt-2 flex flex-col gap-2">
       <!-- Single date -->
       <input
         v-if="!isRange"
@@ -14,37 +14,38 @@
         :disabled="field.disabled"
         @input="onInput($event.target.value)"
         @focus="$emit('focus')"
-        class="date-input"
+        class="w-full p-2 border border-gray-300 rounded-md text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"
       />
 
       <!-- Date range -->
-      <div v-else class="range-wrapper">
+      <div v-else class="flex gap-2 items-center">
         <input
           type="date"
           v-model="rangeStart"
           :min="minDate"
           :max="rangeEnd || maxDate"
           @input="onRangeInput"
-          class="date-input"
+          class="flex-1 p-2 border border-gray-300 rounded-md text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"
         />
-        <span>to</span>
+        <span class="text-gray-500">to</span>
         <input
           type="date"
           v-model="rangeEnd"
           :min="rangeStart || minDate"
           :max="maxDate"
           @input="onRangeInput"
-          class="date-input"
+          class="flex-1 p-2 border border-gray-300 rounded-md text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"
         />
       </div>
     </div>
 
     <!-- Error messages -->
-    <div v-if="errorMessages.length" class="errors">
+    <div v-if="errorMessages.length" class="mt-1 text-red-600 text-sm">
       <div v-for="(err, i) in errorMessages" :key="i">{{ err }}</div>
     </div>
   </label>
 </template>
+
 <script lang="ts" setup>
 import { ref, watch, computed } from 'vue'
 import type { FormField } from '@/types/form.types'
@@ -115,33 +116,3 @@ function onRangeInput() {
   emit('update:modelValue', { start: rangeStart.value, end: rangeEnd.value })
 }
 </script>
-<style scoped>
-.datefield {
-  display: block;
-  margin-bottom: 16px;
-  font-size: 16px;
-}
-
-.date-inputs {
-  margin-top: 4px;
-}
-
-.date-input {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 16px;
-}
-
-.range-wrapper {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.errors {
-  color: #d00;
-  font-size: 14px;
-  margin-top: 4px;
-}
-</style>

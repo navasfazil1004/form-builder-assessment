@@ -1,6 +1,6 @@
 <template>
-  <fieldset :aria-labelledby="field.id" class="checkboxgroup">
-    <legend>{{ field.label }}</legend>
+  <fieldset :aria-labelledby="field.id" class="mb-4 border rounded-lg p-4">
+    <legend class="font-medium text-gray-800 mb-2">{{ field.label }}</legend>
 
     <!-- Search input -->
     <input
@@ -9,15 +9,15 @@
       v-model="search"
       placeholder="Search..."
       @focus="$emit('focus')"
-      class="search-input"
+      class="w-full mb-2 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300"
     />
 
     <!-- Checkboxes -->
-    <div :class="['controls', layoutClass]">
+    <div :class="['flex flex-wrap gap-3 mt-2', layoutClassTailwind]">
       <label
         v-for="opt in filteredOptions"
         :key="opt.value"
-        class="checkbox-option"
+        class="flex items-center gap-2 p-2 rounded-md cursor-pointer transition hover:bg-blue-50"
         :title="opt.label"
       >
         <input
@@ -26,42 +26,47 @@
           :checked="internalValue.includes(opt.value)"
           @change="toggle(opt.value, $event.target.checked)"
           :disabled="field.disabled"
+          class="w-5 h-5 cursor-pointer"
           @focus="$emit('focus')"
         />
-        <span>{{ opt.label }}</span>
+        <span class="text-gray-700">{{ opt.label }}</span>
       </label>
 
-      <div v-if="filteredOptions.length === 0" class="empty">No options found</div>
+      <div v-if="filteredOptions.length === 0" class="text-gray-500 text-sm mt-1">
+        No options found
+      </div>
     </div>
 
     <!-- Select All / Clear All -->
-    <div class="meta">
-      <label class="select-all">
+    <div class="flex gap-4 items-center mt-3">
+      <label class="flex items-center gap-2 cursor-pointer select-none">
         <input
           type="checkbox"
           :checked="allSelected"
           :indeterminate.prop="partialSelected"
           @change="toggleAll($event.target.checked)"
           :disabled="field.disabled || !options.length"
+          class="w-4 h-4 cursor-pointer"
         />
-        Select All
+        <span class="text-gray-700 text-sm">Select All</span>
       </label>
       <button
         type="button"
         @click="clearAll"
         :disabled="internalValue.length === 0 || field.disabled"
+        class="px-2 py-1 text-sm bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50"
       >
         Clear
       </button>
     </div>
 
     <!-- Validation errors -->
-    <div v-if="errors.length" class="errors">
+    <div v-if="errors.length" class="mt-2 text-red-600 text-sm">
       <div v-for="(e, i) in errors" :key="i">{{ e }}</div>
     </div>
 
     <!-- Loading state -->
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="mt-2 text-gray-500 text-sm">Loading...</div>
   </fieldset>
 </template>
 
@@ -99,7 +104,13 @@ const filteredOptions = computed(() => {
   return options.value.filter(o => o.label.toLowerCase().includes(search.value.toLowerCase()));
 });
 
-const layoutClass = computed(() => props.field.layout || "vertical");
+const layoutClassTailwind = computed(() => {
+  switch (props.field.layout) {
+    case "horizontal": return "flex-row";
+    case "grid": return "grid grid-cols-2 sm:grid-cols-3 gap-3";
+    default: return "flex-col";
+  }
+});
 
 // Toggle individual checkbox
 function toggle(val: any, checked: boolean) {
@@ -144,102 +155,11 @@ const errors = computed(() => {
 async function loadOptionsAsync(loader?: () => Promise<Array<{ label: string; value: any }>>) {
   if (!loader) return;
   loading.value = true;
-  try {
-    options.value = await loader();
-  } finally {
-    loading.value = false;
-  }
+  try { options.value = await loader(); } 
+  finally { loading.value = false; }
 }
 
-onMounted(() => {
-  if (props.asyncLoader) loadOptionsAsync(props.asyncLoader);
-});
+onMounted(() => { if (props.asyncLoader) loadOptionsAsync(props.asyncLoader); });
 
 defineExpose({ loadOptionsAsync });
 </script>
-
-<style scoped>
-.checkboxgroup {
-  margin-bottom: 12px;
-  border: 1px solid #ccc;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 16px; /* larger text for touch */
-}
-
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px; /* bigger spacing for touch */
-  margin-top: 6px;
-}
-
-.controls.vertical { flex-direction: column; }
-.controls.horizontal { flex-direction: row; }
-.controls.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-
-.checkbox-option {
-  display: flex;
-  align-items: center;
-  gap: 8px; /* touch-friendly spacing */
-  padding: 10px 12px; /* larger tap area */
-  border-radius: 6px;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.checkbox-option:hover {
-  background-color: rgba(0, 0, 255, 0.05);
-  transform: scale(1.02);
-}
-
-input[type='checkbox'] {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-.meta {
-  margin-top: 10px;
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.select-all {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.errors {
-  color: #d00;
-  font-size: 14px;
-  margin-top: 6px;
-}
-
-.empty {
-  font-size: 14px;
-  color: #666;
-  margin-top: 4px;
-}
-
-.loading {
-  font-size: 14px;
-  color: #666;
-  margin-top: 4px;
-}
-
-input[type='search'] {
-  margin-bottom: 8px;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  outline: none;
-  font-size: 16px;
-}
-</style>

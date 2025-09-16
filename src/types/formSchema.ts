@@ -34,15 +34,4 @@ export const formSchema: FormField[] = [
       { label: 'No', value: false },
     ],
   },
-  {
-    id: 'companyName',
-    type: 'text',
-    name: 'companyName',
-    label: 'Company Name',
-    conditionalDisplay: {
-      field: 'isEmployed',
-      operator: 'equals',
-      value: true,
-    },
-  },
 ]

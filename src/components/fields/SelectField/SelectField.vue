@@ -1,20 +1,20 @@
 <template>
-  <label :for="field.id" class="selectfield">
-    <div class="label-row">
-      <span>{{ field.label }}</span>
-      <small v-if="field.helpText">{{ field.helpText }}</small>
+  <label :for="field.id" class="block mb-3">
+    <div class="flex justify-between mb-1">
+      <span class="font-medium text-gray-800">{{ field.label }}</span>
+      <small v-if="field.helpText" class="text-gray-500 text-xs">{{ field.helpText }}</small>
     </div>
 
-    <div class="select-row">
-      <!-- Show selected tags for multi-select -->
-      <div v-if="field.multiple && Array.isArray(internalValue) && internalValue.length" class="selected-tags">
-        <span v-for="val in internalValue" :key="val" class="selected-tag">
+    <div class="flex flex-col gap-2 relative">
+      <!-- Multi-select tags -->
+      <div v-if="field.multiple && Array.isArray(internalValue) && internalValue.length" class="flex flex-wrap gap-2 mb-1">
+        <span v-for="val in internalValue" :key="val" class="bg-indigo-100 text-indigo-700 rounded px-2 py-1 text-sm flex items-center">
           {{ options.find(o => o.value === val)?.label || val }}
-          <button type="button" @click="removeTag(val)">×</button>
+          <button type="button" @click="removeTag(val)" class="ml-1 text-indigo-600 hover:text-indigo-800">×</button>
         </span>
       </div>
 
-      <!-- Search input for searchable dropdown -->
+      <!-- Searchable input -->
       <input
         v-if="searchable"
         type="search"
@@ -24,32 +24,30 @@
         @keydown.up.prevent="onArrowUp"
         @keydown.enter.prevent="onEnter"
         @focus="$emit('focus')"
+        class="border text-gray-800 border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
       />
 
-      <!-- Custom dropdown for searchable -->
-      <ul v-if="searchable && search" class="dropdown">
+      <!-- Searchable dropdown -->
+      <ul v-if="searchable && search" class="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md max-h-40 overflow-auto shadow-lg text-gray-900">
         <li
           v-for="(opt, idx) in filteredOptions"
           :key="opt.value"
-          :class="{
-            focused: focusedIndex === idx,
-            selected: field.multiple && Array.isArray(internalValue) && internalValue.includes(opt.value)
-          }"
           @click="selectOption(opt)"
+          :class="[
+            'p-2 cursor-pointer',
+            focusedIndex === idx ? 'bg-blue-100' : '',
+            field.multiple && Array.isArray(internalValue) && internalValue.includes(opt.value) ? 'font-semibold text-blue-700' : ''
+          ]"
         >
           <template v-if="field.multiple">
-            <input
-              type="checkbox"
-              :checked="Array.isArray(internalValue) && internalValue.includes(opt.value)"
-              readonly
-            />
+            <input type="checkbox" :checked="Array.isArray(internalValue) && internalValue.includes(opt.value)" readonly class="mr-2"/>
           </template>
           {{ opt.label }}
         </li>
-        <li v-if="filteredOptions.length === 0" class="empty">No options found</li>
+        <li v-if="filteredOptions.length === 0" class="p-2 text-gray-400 cursor-default">No options found</li>
       </ul>
 
-      <!-- Native select for non-searchable mode -->
+      <!-- Native select -->
       <select
         v-else
         :id="field.id"
@@ -58,24 +56,21 @@
         :disabled="field.disabled || loading"
         @change="onChange"
         @focus="$emit('focus')"
+        class="border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
       >
         <template v-for="group in groupedOptions" :key="group.key">
           <optgroup v-if="group.group" :label="group.group">
-            <option v-for="opt in group.options" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
+            <option v-for="opt in group.options" :key="opt.value" :value="opt.value"  class="text-gray-800">{{ opt.label }}</option>
           </optgroup>
           <template v-else>
-            <option v-for="opt in group.options" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
+            <option v-for="opt in group.options" :key="opt.value" :value="opt.value" class="text-gray-800">{{ opt.label }}</option>
           </template>
         </template>
       </select>
     </div>
 
-    <!-- Loading state -->
-    <div v-if="loading" class="loading">Loading...</div>
+    <!-- Loading -->
+    <div v-if="loading" class="mt-1 text-gray-500 text-sm">Loading...</div>
   </label>
 </template>
 
@@ -110,7 +105,7 @@ const searchable = computed(() => props.searchable ?? false);
 
 const filteredOptions = computed(() => {
   if (!search.value) return options.value;
-  return options.value.filter((o) => o.label.toLowerCase().includes(search.value.toLowerCase()));
+  return options.value.filter(o => o.label.toLowerCase().includes(search.value.toLowerCase()));
 });
 
 const groupedOptions = computed(() => {
@@ -128,14 +123,13 @@ const groupedOptions = computed(() => {
 
   const out: { key: string; group?: string; options: SelectOption[] }[] = [];
   for (const g of Object.keys(groups)) out.push({ key: `group-${g}`, group: g, options: groups[g] });
-
   return [...out, ...ungrouped];
 });
 
 function onChange(e: Event) {
   const el = e.target as HTMLSelectElement;
   if (props.field.multiple) {
-    const vals = Array.from(el.selectedOptions).map((o) => o.value);
+    const vals = Array.from(el.selectedOptions).map(o => o.value);
     internalValue.value = vals;
     emit("update:modelValue", vals);
   } else {
@@ -147,11 +141,7 @@ function onChange(e: Event) {
 function selectOption(opt: SelectOption) {
   if (props.field.multiple) {
     let current = Array.isArray(internalValue.value) ? [...internalValue.value] : [];
-    if (current.includes(opt.value)) {
-      current = current.filter((v) => v !== opt.value);
-    } else {
-      current.push(opt.value);
-    }
+    current.includes(opt.value) ? current.splice(current.indexOf(opt.value), 1) : current.push(opt.value);
     internalValue.value = current;
     emit("update:modelValue", current);
   } else {
@@ -165,7 +155,7 @@ function selectOption(opt: SelectOption) {
 function removeTag(value: string) {
   if (!props.field.multiple) return;
   const current = Array.isArray(internalValue.value) ? [...internalValue.value] : [];
-  internalValue.value = current.filter((v) => v !== value);
+  internalValue.value = current.filter(v => v !== value);
   emit("update:modelValue", internalValue.value);
 }
 
@@ -186,15 +176,11 @@ onMounted(() => {
 // Keyboard navigation
 function onArrowDown() {
   if (filteredOptions.value.length === 0) return;
-  focusedIndex.value = focusedIndex.value === null || focusedIndex.value >= filteredOptions.value.length - 1
-    ? 0
-    : focusedIndex.value + 1;
+  focusedIndex.value = focusedIndex.value === null || focusedIndex.value >= filteredOptions.value.length - 1 ? 0 : focusedIndex.value + 1;
 }
 function onArrowUp() {
   if (filteredOptions.value.length === 0) return;
-  focusedIndex.value = focusedIndex.value === null || focusedIndex.value <= 0
-    ? filteredOptions.value.length - 1
-    : focusedIndex.value - 1;
+  focusedIndex.value = focusedIndex.value === null || focusedIndex.value <= 0 ? filteredOptions.value.length - 1 : focusedIndex.value - 1;
 }
 function onEnter() {
   if (focusedIndex.value === null) return;
@@ -205,21 +191,3 @@ function onEnter() {
 
 defineExpose({ loadOptionsAsync });
 </script>
-
-<style scoped>
-.selectfield { display: block; margin-bottom: 12px; }
-.label-row { margin-bottom: 4px; }
-.select-row { display: flex; flex-direction: column; gap: 4px; }
-select, input[type="search"] { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
-
-.dropdown { border: 1px solid #ccc; border-radius: 4px; max-height: 150px; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-.dropdown li { padding: 6px 8px; cursor: pointer; }
-.dropdown li.focused { background-color: #0077ff33; }
-.dropdown li.selected { font-weight: bold; }
-.dropdown li.empty { color: #666; cursor: default; }
-
-.loading { font-size: 0.9em; color: #666; }
-.selected-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 2px; }
-.selected-tag { background: #e0e7ff; color: #1e293b; border-radius: 3px; padding: 2px 6px; font-size: 0.9em; display: flex; align-items: center; }
-.selected-tag button { margin-left: 4px; background: transparent; border: none; cursor: pointer; font-size: 0.9em; line-height: 1; }
-</style>
